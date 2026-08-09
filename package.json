@@ -8,6 +8,8 @@
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix server run build && npm --prefix client run build",
+    "build:railway": "npx prisma generate && npm --prefix server run build",
+    "start": "npx prisma migrate deploy && node server/dist/index.js",
     "test": "npm --prefix server run test",
     "prisma:generate": "npx prisma generate",
     "prisma:push": "npx prisma db push"
