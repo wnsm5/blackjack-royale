@@ -1,0 +1,210 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  username     String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  isGuest      Boolean       @default(false)
+
+  profile          Profile?
+  games            Game[]
+  statistics       Statistics?
+  achievements     UserAchievement[]
+  dailyRewards     DailyReward[]
+  userChallenges   UserChallenge[]
+  transactions     Transaction[]
+  sessions         Session[]
+}
+
+model Profile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl    String   @default("default_avatar")
+  credits      Int      @default(10000)
+  level        Int      @default(1)
+  xp           Int      @default(0)
+  winStreak    Int      @default(0)
+  loseStreak   Int      @default(0)
+  maxWinStreak Int      @default(0)
+  maxLoseStreak Int     @default(0)
+  lastDailyClaim DateTime?
+  consecutiveDailyDays Int @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+model Game {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       String   @default("BETTING") // BETTING, PLAYING, DEALER_TURN, RESOLVED, FINISHED
+  bet          Int      @default(0)
+  insuranceBet Int      @default(0)
+  hasInsurance Boolean  @default(false)
+  dealerCards  String   @default("[]") // JSON string of Card[]
+  dealerScore  Int      @default(0)
+  dealerBust   Boolean  @default(false)
+  numDecks     Int      @default(6)
+  shoeState    String   @default("[]") // JSON string of remaining cards or seed state
+  activeHandIndex Int   @default(0)
+  payout       Int      @default(0)
+  netProfit    Int      @default(0)
+  result       String?  // WIN, LOSS, PUSH, BLACKJACK, SURRENDER
+  analysis     String?  // JSON recommendation & feedback
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hands        Hand[]
+  actions      Action[]
+  transactions Transaction[]
+}
+
+model Hand {
+  id            String   @id @default(uuid())
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  handIndex     Int      @default(0)
+  cards         String   @default("[]") // JSON string of Card[]
+  bet           Int      @default(0)
+  status        String   @default("IN_PROGRESS") // IN_PROGRESS, STAND, BUST, BLACKJACK, SURRENDER, FINISHED
+  result        String?  // WIN, LOSS, PUSH, BLACKJACK
+  score         Int      @default(0)
+  isSoft        Boolean  @default(false)
+  isFromSplit   Boolean  @default(false)
+  isAceSplit    Boolean  @default(false)
+  doubled       Boolean  @default(false)
+  payout        Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model Action {
+  id        String   @id @default(uuid())
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  handIndex Int      @default(0)
+  type      String   // BET, HIT, STAND, DOUBLE, SPLIT, SURRENDER, INSURANCE
+  cardDrawn String?  // JSON string of Card if drawn
+  createdAt DateTime @default(now())
+}
+
+model Statistics {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gamesPlayed    Int      @default(0)
+  wins           Int      @default(0)
+  losses         Int      @default(0)
+  pushes         Int      @default(0)
+  blackjacks     Int      @default(0)
+  busts          Int      @default(0)
+  totalWagered   Int      @default(0)
+  totalWon       Int      @default(0)
+  totalLost      Int      @default(0)
+  netProfit      Int      @default(0)
+  biggestBet     Int      @default(0)
+  biggestWin     Int      @default(0)
+  biggestLoss    Int      @default(0)
+  hitsCount      Int      @default(0)
+  standsCount    Int      @default(0)
+  doublesCount   Int      @default(0)
+  splitsCount    Int      @default(0)
+  surrendersCount Int     @default(0)
+  insurancesCount Int     @default(0)
+  successfulDoubles Int   @default(0)
+  updatedAt      DateTime @updatedAt
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String
+  category    String   // WINS, BLACKJACK, STREAK, GAMES, SPLIT, DOUBLE
+  targetValue Int      @default(1)
+  rewardXp    Int      @default(100)
+  rewardCredits Int    @default(500)
+  icon        String   @default("trophy")
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+  progress      Int         @default(0)
+
+  @@unique([userId, achievementId])
+}
+
+model DailyReward {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayStreak  Int      @default(1)
+  amount     Int
+  claimedAt  DateTime @default(now())
+}
+
+model DailyChallenge {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  title       String
+  description String
+  targetType  String   // PLAY_GAMES, WIN_GAMES, GET_BLACKJACK, SUCCESSFUL_DOUBLE, SUCCESSFUL_SPLIT
+  targetAmount Int
+  rewardCredits Int
+  rewardXp    Int
+  date        String   // YYYY-MM-DD
+
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  progress    Int            @default(0)
+  completed   Boolean        @default(false)
+  claimed     Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  @@unique([userId, challengeId])
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId        String?
+  game          Game?    @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  type          String   // BET, WIN, LOSS, PUSH, BLACKJACK, SURRENDER, INSURANCE_WIN, INSURANCE_LOSS, DAILY_REWARD, FAILSAFE_REWARD, CHALLENGE_REWARD, ACHIEVEMENT_REWARD
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  createdAt     DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

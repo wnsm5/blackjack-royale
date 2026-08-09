@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}
+
+/* Felt table gradient */
+.casino-felt {
+  background: radial-gradient(circle at center, #1b7a46 0%, #0d4224 70%, #062413 100%);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.7);
+}
+
+/* Card deal animation from shoe */
+@keyframes dealCard {
+  0% {
+    opacity: 0;
+    transform: translateY(-80px) translateX(-60px) scale(0.5) rotate(-20deg);
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+  }
+}
+
+.animate-deal-card {
+  animation: dealCard 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Card flip animation */
+.card-flip-container {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Chip glow effect */
+.chip-glow {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
