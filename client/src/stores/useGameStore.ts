@@ -55,7 +55,7 @@ export const useGameStore = create<GameState>((set, get) => {
             dealerHand: { ...finalState.dealerHand, cards: step1Cards },
           },
         });
-        await delay(900);
+        await delay(250);
 
         // Step 2: Draw card 3, 4, etc. sequentially
         for (let i = 3; i <= finalDealerCards.length; i++) {
@@ -68,7 +68,7 @@ export const useGameStore = create<GameState>((set, get) => {
               dealerHand: { ...finalState.dealerHand, cards: stepICards },
             },
           });
-          await delay(900);
+          await delay(250);
         }
 
         // Finalize state
@@ -121,14 +121,14 @@ export const useGameStore = create<GameState>((set, get) => {
         };
 
         set({ gameState: animState, isLoading: false });
-        await delay(300);
+        await delay(100);
 
         // Step 1: Player Card 1
         if (pCards[0]) {
           soundManager.playCardDraw();
           animState.hands[0].cards = [pCards[0]];
           set({ gameState: { ...animState } });
-          await delay(600);
+          await delay(200);
         }
 
         // Step 2: Dealer Card 1 (Visible)
@@ -136,7 +136,7 @@ export const useGameStore = create<GameState>((set, get) => {
           soundManager.playCardDraw();
           animState.dealerHand.cards = [dCards[0]];
           set({ gameState: { ...animState } });
-          await delay(600);
+          await delay(200);
         }
 
         // Step 3: Player Card 2
@@ -144,7 +144,7 @@ export const useGameStore = create<GameState>((set, get) => {
           soundManager.playCardDraw();
           animState.hands[0].cards = [pCards[0], pCards[1]];
           set({ gameState: { ...animState } });
-          await delay(600);
+          await delay(200);
         }
 
         // Step 4: Dealer Card 2 (Holecard)
@@ -152,7 +152,7 @@ export const useGameStore = create<GameState>((set, get) => {
           soundManager.playCardDraw();
           animState.dealerHand.cards = [dCards[0], dCards[1]];
           set({ gameState: { ...animState } });
-          await delay(500);
+          await delay(200);
         }
 
         // Finalize state
