@@ -15,7 +15,7 @@
     "jsx": "react-jsx",
 
     /* Isolate from monorepo node_modules */
-    "types": ["canvas-confetti"],
+    "types": ["vite/client", "canvas-confetti"],
 
     /* Linting */
     "strict": true,
