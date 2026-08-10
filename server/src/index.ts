@@ -38,7 +38,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
   logger.info(`⚡ [Server] Running on port ${PORT}`);
   AchievementService.seedAchievements()
     .then(() => logger.info('🏆 [Database] Achievements seeded successfully'))
