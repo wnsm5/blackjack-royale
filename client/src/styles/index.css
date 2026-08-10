@@ -15,6 +15,12 @@
   .rotate-y-180 {
     transform: rotateY(180deg);
   }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+  }
 }
 
 /* Felt table gradient */

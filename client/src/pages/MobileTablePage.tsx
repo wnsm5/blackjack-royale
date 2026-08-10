@@ -22,10 +22,10 @@ export const MobileTablePage: React.FC = () => {
   const activeHand = gameState?.hands[gameState.activeHandIndex];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px-60px)] casino-felt p-2 justify-between items-center select-none overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-50px-65px)] casino-felt p-2 justify-between items-center select-none overflow-hidden pb-safe">
       
-      {/* 1. Header ultra-compact */}
-      <div className="w-full flex items-center justify-between px-2 py-1 bg-slate-950/60 rounded-xl border border-slate-800/60 shrink-0">
+      {/* 1. Bar des informations de partie */}
+      <div className="w-full flex items-center justify-between px-2 py-1 bg-slate-950/70 rounded-xl border border-slate-800/80 shrink-0">
         <button
           onClick={() => setIsDailyOpen(true)}
           className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold"
@@ -67,7 +67,7 @@ export const MobileTablePage: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Centre : Tapis de jeu compact avec cartes ajustées */}
+      {/* 2. Tapis de cartes central */}
       <div className="flex-1 w-full flex flex-col justify-center items-center gap-1 py-1 overflow-hidden">
         {/* Dealer */}
         {gameState ? (
@@ -80,7 +80,7 @@ export const MobileTablePage: React.FC = () => {
             cardDelayOffset={0.35}
           />
         ) : (
-          <div className="py-1.5 px-3 rounded-lg bg-slate-950/40 border border-slate-800 text-emerald-300 text-[11px] font-bold uppercase tracking-wider">
+          <div className="py-2 px-4 rounded-xl bg-slate-950/60 border border-slate-800 text-emerald-300 text-xs font-bold uppercase tracking-wider">
             Misez pour démarrer
           </div>
         )}
@@ -108,8 +108,8 @@ export const MobileTablePage: React.FC = () => {
         <GameResultBanner />
       </div>
 
-      {/* 3. Zone de contrôle dédiée fixée en bas, juste au-dessus de la nav */}
-      <div className="w-full shrink-0">
+      {/* 3. Zone de contrôle dédiée fixée en bas, avec marge de sécurité pour la navigation */}
+      <div className="w-full shrink-0 mb-1">
         {!isPlaying ? (
           <BettingPanel />
         ) : (
