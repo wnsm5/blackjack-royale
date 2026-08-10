@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure the root fills exactly the dynamic viewport on iOS PWA */
+html, body, #root {
+  height: 100%;
+  height: 100dvh;
+  background: #020617; /* slate-950 – prevents white flash */
+  overflow: hidden;
+}
+
 @layer utilities {
   .perspective-1000 {
     perspective: 1000px;
@@ -16,10 +24,17 @@
     transform: rotateY(180deg);
   }
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 20px);
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 10px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* Adds safe area as MARGIN so bg color fills to edge */
+  .mt-safe {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
