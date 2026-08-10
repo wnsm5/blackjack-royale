@@ -5,7 +5,6 @@ import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
 import { AuthPage } from './pages/AuthPage';
-import { TablePage } from './pages/TablePage';
 import { MobileTablePage } from './pages/MobileTablePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StatsPage } from './pages/StatsPage';
@@ -30,24 +29,19 @@ export const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
+      {/* 
+        h-[100dvh] forces the app to fit EXACTLY the mobile screen.
+        overflow-hidden prevents ANY window scrollbar on phones.
+      */}
+      <div className="h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
         <Navbar />
 
-        <div className="flex-1 flex w-full">
+        <div className="flex-1 flex w-full overflow-hidden">
           <Sidebar />
 
-          <main className="flex-1 w-full overflow-y-auto">
+          <main className="flex-1 w-full h-full overflow-y-auto">
             <Routes>
-              <Route path="/" element={
-                <div className="w-full h-full">
-                  <div className="block md:hidden h-full">
-                    <MobileTablePage />
-                  </div>
-                  <div className="hidden md:block h-full">
-                    <TablePage />
-                  </div>
-                </div>
-              } />
+              <Route path="/" element={<MobileTablePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/history" element={<HistoryPage />} />

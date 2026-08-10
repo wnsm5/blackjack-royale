@@ -22,30 +22,30 @@ export const MobileTablePage: React.FC = () => {
   const activeHand = gameState?.hands[gameState.activeHandIndex];
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-50px-65px)] casino-felt p-2 justify-between items-center select-none overflow-hidden pb-safe">
+    <div className="flex flex-col h-full casino-felt p-2 justify-between items-center select-none overflow-hidden pb- safe">
       
-      {/* 1. Bar des informations de partie */}
-      <div className="w-full flex items-center justify-between px-2 py-1 bg-slate-950/70 rounded-xl border border-slate-800/80 shrink-0">
+      {/* Top Header Bar */}
+      <div className="w-full flex items-center justify-between px-3 py-1 bg-slate-950/80 rounded-xl border border-slate-800/80 shrink-0">
         <button
           onClick={() => setIsDailyOpen(true)}
-          className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold"
         >
-          <Gift size={12} />
+          <Gift size={13} />
           <span>Bonus</span>
         </button>
 
         {gameState ? (
-          <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-200">
+          <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-200">
             <span>Sabot: {gameState.deckRemainingCount}</span>
             <span>•</span>
             <span className="flex items-center gap-0.5 text-amber-400">
-              <Coins size={11} />
+              <Coins size={12} />
               {gameState.bet} CR
             </span>
           </div>
         ) : (
-          <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1">
-            <Coins size={11} />
+          <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+            <Coins size={13} />
             {credits.toLocaleString()} CR
           </span>
         )}
@@ -53,9 +53,9 @@ export const MobileTablePage: React.FC = () => {
         {credits === 0 && (
           <button
             onClick={() => setIsFailsafeOpen(true)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[10px] font-black animate-pulse"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-black animate-pulse"
           >
-            <LifeBuoy size={12} />
+            <LifeBuoy size={13} />
             <span>+1000</span>
           </button>
         )}
@@ -67,8 +67,8 @@ export const MobileTablePage: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Tapis de cartes central */}
-      <div className="flex-1 w-full flex flex-col justify-center items-center gap-1 py-1 overflow-hidden">
+      {/* Main Felt Play Area */}
+      <div className="flex-1 w-full flex flex-col justify-center items-center gap-2 py-1 overflow-hidden">
         {/* Dealer */}
         {gameState ? (
           <HandDisplay
@@ -80,12 +80,12 @@ export const MobileTablePage: React.FC = () => {
             cardDelayOffset={0.35}
           />
         ) : (
-          <div className="py-2 px-4 rounded-xl bg-slate-950/60 border border-slate-800 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-            Misez pour démarrer
+          <div className="py-2.5 px-4 rounded-xl bg-slate-950/60 border border-slate-800 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+            Placez votre mise
           </div>
         )}
 
-        {/* Joueur */}
+        {/* Player Hands */}
         {gameState && (
           <div className="flex justify-center gap-1 w-full">
             {gameState.hands.map((hand, idx) => (
@@ -108,8 +108,8 @@ export const MobileTablePage: React.FC = () => {
         <GameResultBanner />
       </div>
 
-      {/* 3. Zone de contrôle dédiée fixée en bas, avec marge de sécurité pour la navigation */}
-      <div className="w-full shrink-0 mb-1">
+      {/* Control Area (Fixed directly above bottom nav) */}
+      <div className="w-full shrink-0 mb-1 z-20">
         {!isPlaying ? (
           <BettingPanel />
         ) : (
