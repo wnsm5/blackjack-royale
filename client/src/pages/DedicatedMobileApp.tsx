@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../stores/useGameStore';
 import { useAuthStore } from '../stores/useAuthStore';
-import { HandDisplay } from '../components/HandDisplay';
+import { CardComponent } from '../components/CardComponent';
+import { CasinoChip } from '../components/CasinoChip';
 import { GameResultBanner } from '../components/GameResultBanner';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { DailyRewardModal } from '../components/DailyRewardModal';
 import { FailsafeModal } from '../components/FailsafeModal';
 import { 
   Play, Hand, Layers, ShieldAlert, Flag, Coins, Gift, LifeBuoy, 
-  RotateCcw, Dices, Award, User, BarChart2, Check, X
+  RotateCcw, Check, X
 } from 'lucide-react';
 
 const CHIP_VALUES = [25, 50, 100, 250, 500];
@@ -30,11 +31,8 @@ export const DedicatedMobileApp: React.FC = () => {
   return (
     <div className="fixed inset-0 w-screen h-[100dvh] bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans">
       
-      {/* ==========================================
-          1. HEADER NATIVE MOBILE (Safe Area Top)
-         ========================================== */}
-      <header className="w-full bg-slate-900/90 border-b border-slate-800/80 px-3 py-2 pt-safe flex items-center justify-between shrink-0 z-30 shadow-md">
-        {/* Logo / Title */}
+      {/* 1. HEADER PERMANENT (Safe Area Top) */}
+      <header className="w-full bg-slate-900/90 border-b border-slate-800 px-3 py-1.5 pt-safe flex items-center justify-between shrink-0 z-30 shadow">
         <div className="flex items-center gap-1.5">
           <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-black text-sm shadow">
             ♠
@@ -42,13 +40,11 @@ export const DedicatedMobileApp: React.FC = () => {
           <span className="font-extrabold text-sm text-amber-400">Blackjack</span>
         </div>
 
-        {/* Bankroll badge */}
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950 border border-amber-500/40 text-amber-400 text-xs font-black shadow-inner">
           <Coins size={14} />
           <span>{credits.toLocaleString()} CR</span>
         </div>
 
-        {/* Bonus / Relief */}
         {credits === 0 ? (
           <button
             onClick={() => setIsFailsafeOpen(true)}
@@ -67,23 +63,20 @@ export const DedicatedMobileApp: React.FC = () => {
         )}
       </header>
 
-      {/* Error alert toast */}
       {error && (
         <div className="mx-3 mt-1 px-3 py-1 rounded-lg bg-rose-900/90 border border-rose-600 text-rose-100 text-xs font-bold text-center shrink-0 z-40">
           {error}
         </div>
       )}
 
-      {/* ==========================================
-          2. CASINO FELT GAMEPLAY AREA (CENTRAL)
-         ========================================== */}
+      {/* 2. TAPIS DE JEU ULTRA-AÉRÉ AVEC PETITES CARTES */}
       <main className="flex-1 w-full casino-felt flex flex-col items-center justify-between p-2 relative overflow-hidden">
         
-        {/* Game status info */}
+        {/* En-tête de partie */}
         {gameState && (
           <div className="w-full flex items-center justify-between px-2 text-[11px] font-bold text-emerald-200/90 z-10">
             <span className="bg-slate-950/60 px-2 py-0.5 rounded-md border border-slate-800">
-              Sabot: {gameState.deckRemainingCount} cartes
+              Sabot: {gameState.deckRemainingCount}
             </span>
             <span className="bg-slate-950/60 px-2 py-0.5 rounded-md border border-amber-500/40 text-amber-400 flex items-center gap-1">
               Mise: {gameState.bet} CR
@@ -91,55 +84,74 @@ export const DedicatedMobileApp: React.FC = () => {
           </div>
         )}
 
-        {/* Felt content */}
-        <div className="flex-1 w-full flex flex-col items-center justify-center gap-2 my-auto">
-          {/* Dealer Hand */}
+        {/* Zone centrale du tapis */}
+        <div className="flex-1 w-full flex flex-col items-center justify-around my-auto">
+          
+          {/* Main du Croupier */}
           {gameState ? (
-            <HandDisplay
-              title="Croupier"
-              cards={gameState.dealerHand.cards}
-              score={gameState.dealerHand.score}
-              isSoft={gameState.dealerHand.isSoft}
-              isBust={gameState.dealerHand.isBust}
-              cardDelayOffset={0.35}
-            />
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-slate-300 uppercase tracking-wider">Croupier</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-black bg-slate-800 text-amber-300 border border-slate-700">
+                  {gameState.dealerHand.isBust
+                    ? `BUST (${gameState.dealerHand.score})`
+                    : gameState.dealerHand.cards.some(c => !c.faceUp)
+                    ? '?'
+                    : gameState.dealerHand.score}
+                </span>
+              </div>
+              <div className="flex justify-center -space-x-6 p-1 min-h-[90px] items-center">
+                {gameState.dealerHand.cards.map((card, idx) => (
+                  <CardComponent key={card.id || idx} card={card} />
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-col items-center gap-1 text-emerald-300/80 my-auto">
-              <Dices size={36} className="animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest">Choisissez votre mise</span>
+            <div className="flex flex-col items-center gap-1 text-emerald-300/80">
+              <span className="text-xs font-bold uppercase tracking-widest">Placez vos jetons</span>
             </div>
           )}
 
-          {/* Player Hand(s) */}
-          {gameState && (
-            <div className="flex justify-center gap-2 w-full">
-              {gameState.hands.map((hand, idx) => (
-                <HandDisplay
-                  key={hand.id}
-                  title={gameState.hands.length > 1 ? `Main ${idx + 1}` : 'Joueur'}
-                  cards={hand.cards}
-                  score={hand.score}
-                  isSoft={hand.isSoft}
-                  isBust={hand.status === 'BUST'}
-                  isActive={idx === gameState.activeHandIndex && !!isPlaying}
-                  bet={hand.bet}
-                  result={hand.result}
-                  cardDelayOffset={0.0}
-                />
-              ))}
-            </div>
-          )}
-
+          {/* Banner Résultat (Victoire / Défaite) */}
           <GameResultBanner />
+
+          {/* Main du Joueur */}
+          {gameState && (
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex justify-center gap-3 w-full">
+                {gameState.hands.map((hand, idx) => (
+                  <div key={hand.id} className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-300 uppercase tracking-wider">
+                        {gameState.hands.length > 1 ? `Main ${idx + 1}` : 'Joueur'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-black border ${
+                        hand.status === 'BUST'
+                          ? 'bg-rose-600 text-white'
+                          : hand.score === 21
+                          ? 'bg-amber-400 text-slate-950 font-black'
+                          : 'bg-slate-800 text-amber-300 border-slate-700'
+                      }`}>
+                        {hand.score}
+                      </span>
+                    </div>
+                    <div className="flex justify-center -space-x-6 p-1 min-h-[90px] items-center">
+                      {hand.cards.map((card, cIdx) => (
+                        <CardComponent key={card.id || cIdx} card={card} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* ==========================================
-          3. CONTROLS DE JEU DÉDIÉS SUR-MESURE MOBILE
-         ========================================== */}
-      <footer className="w-full bg-slate-950 border-t border-slate-800/80 p-2.5 shrink-0 z-30">
+      {/* 3. PANNEAU DE CONTRÔLE MOBILE AVEC JETONS REALISTES CASINO */}
+      <footer className="w-full bg-slate-950 border-t border-slate-800/80 p-2.5 shrink-0 z-30 pb-safe">
         
-        {/* --- STATE A: INSURANCE OFFER --- */}
+        {/* OFFERTE D'ASSURANCE */}
         {gameState?.status === 'INSURANCE_OFFER' ? (
           <div className="flex flex-col items-center gap-2 bg-slate-900 p-3 rounded-xl border border-amber-500/40">
             <span className="text-xs font-bold text-amber-400">Assurance contre le Blackjack ?</span>
@@ -161,14 +173,13 @@ export const DedicatedMobileApp: React.FC = () => {
             </div>
           </div>
         ) : isPlaying && activeHand ? (
-          /* --- STATE B: PLAYING ACTIONS (TIRER, RESTER, DOUBLER, SPLIT) --- */
+          /* BOUTONS DE JEU (TIRER, RESTER, DOUBLER, SPLIT) */
           <div className="flex flex-col gap-2 w-full">
-            {/* Primary Action Buttons (BIG TARGETS) */}
             <div className="grid grid-cols-2 gap-2 w-full">
               <button
                 onClick={hit}
                 disabled={!activeHand.canHit || isLoading}
-                className="py-4 rounded-xl bg-emerald-600 text-white font-black text-base shadow-lg active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-20"
+                className="py-3.5 rounded-xl bg-emerald-600 text-white font-black text-base shadow-lg active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-20"
               >
                 <Play size={20} fill="currentColor" />
                 TIRER
@@ -177,14 +188,13 @@ export const DedicatedMobileApp: React.FC = () => {
               <button
                 onClick={stand}
                 disabled={!activeHand.canStand || isLoading}
-                className="py-4 rounded-xl bg-rose-600 text-white font-black text-base shadow-lg active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-20"
+                className="py-3.5 rounded-xl bg-rose-600 text-white font-black text-base shadow-lg active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-20"
               >
                 <Hand size={20} />
                 RESTER
               </button>
             </div>
 
-            {/* Secondary Action Buttons (DOUBLER / SPLIT / SURRENDER) */}
             {(activeHand.canDouble || activeHand.canSplit || activeHand.canSurrender) && (
               <div className="flex gap-2 w-full">
                 {activeHand.canDouble && (
@@ -220,39 +230,38 @@ export const DedicatedMobileApp: React.FC = () => {
             )}
           </div>
         ) : (
-          /* --- STATE C: BETTING PANEL (JETONS + BOUTON DISTRIBUER) --- */
+          /* PANNEAU DE MISE AVEC VRAIS JETONS DE CASINO POKER */
           <div className="flex flex-col gap-2 w-full">
-            {/* Jetons de casino en 1 ligne */}
-            <div className="flex justify-between items-center gap-1 w-full overflow-x-auto py-0.5">
+            {/* Jetons Casino ronds stylisés */}
+            <div className="flex justify-between items-center gap-1.5 w-full py-1">
               <button
                 onClick={() => setBet(Math.min(25, credits))}
                 disabled={isLoading}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 active:scale-95"
+                className="p-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 active:scale-95"
+                title="Remise"
               >
                 <RotateCcw size={16} />
               </button>
 
               {CHIP_VALUES.map((val) => (
-                <button
+                <CasinoChip
                   key={val}
+                  value={val}
+                  size="sm"
                   onClick={() => setBet(Math.min(credits, currentBet + val))}
                   disabled={currentBet + val > credits || isLoading}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-black text-xs shadow active:scale-95 disabled:opacity-30"
-                >
-                  +{val}
-                </button>
+                />
               ))}
 
-              <button
+              <CasinoChip
+                value="MAX"
+                size="sm"
                 onClick={() => setBet(credits)}
                 disabled={credits <= 0 || isLoading}
-                className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-black text-xs shadow active:scale-95"
-              >
-                MAX
-              </button>
+              />
             </div>
 
-            {/* Bouton Distribuer */}
+            {/* Bouton Distribuer avec montant */}
             <button
               onClick={createGame}
               disabled={currentBet <= 0 || currentBet > credits || isLoading}
