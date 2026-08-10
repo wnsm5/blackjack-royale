@@ -5,11 +5,10 @@ import { HandDisplay } from '../components/HandDisplay';
 import { BettingPanel } from '../components/BettingPanel';
 import { ActionButtons } from '../components/ActionButtons';
 import { GameResultBanner } from '../components/GameResultBanner';
-import { DeckPile } from '../components/DeckPile';
 import { AnalysisModal } from '../components/AnalysisModal';
 import { DailyRewardModal } from '../components/DailyRewardModal';
 import { FailsafeModal } from '../components/FailsafeModal';
-import { Gift, LifeBuoy, Dices, Coins } from 'lucide-react';
+import { Gift, LifeBuoy, Coins } from 'lucide-react';
 
 export const TablePage: React.FC = () => {
   const { gameState, error } = useGameStore();
@@ -22,34 +21,26 @@ export const TablePage: React.FC = () => {
   const isPlaying = gameState && gameState.status !== 'FINISHED';
   const activeHand = gameState?.hands[gameState.activeHandIndex];
 
-  const deckRemaining = gameState?.deckRemainingCount ?? 312;
-
   return (
-    <div className="relative min-h-[calc(100vh-65px)] casino-felt flex flex-col justify-between items-center p-4 pb-24 md:pb-8 overflow-x-hidden">
+    <div className="relative h-[calc(100vh-60px-65px)] casino-felt flex flex-col justify-between items-center p-3 pb-4 overflow-hidden select-none">
       
-      {/* Table Top Bar / Quick Rewards */}
-      <div className="w-full max-w-4xl flex items-center justify-between z-10">
+      {/* Top Header info bar */}
+      <div className="w-full flex items-center justify-between z-10 gap-2">
         <button
           onClick={() => setIsDailyOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/70 border border-amber-500/40 text-amber-400 text-xs font-bold shadow-lg hover:scale-105 transition"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 border border-amber-500/40 text-amber-400 text-[11px] font-bold shadow active:scale-95 transition"
         >
-          <Gift size={15} />
-          <span>Bonus Quotidien</span>
+          <Gift size={13} />
+          <span>Bonus</span>
         </button>
 
-        {/* Center Shoe / Deck Info */}
         {gameState && (
-          <div className="flex items-center gap-3 text-xs font-semibold text-emerald-200/80 bg-slate-950/50 px-4 py-1.5 rounded-full border border-emerald-900/60 shadow-md">
-            {gameState.deckWasReshuffled && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 font-black animate-pulse text-[10px] uppercase tracking-widest">
-                Sabot mélangé
-              </span>
-            )}
-            <span>Sabot : {gameState.deckRemainingCount} / {6 * 52} cartes</span>
+          <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-200/90 bg-slate-950/70 px-3 py-1 rounded-full border border-emerald-900/60 shadow">
+            <span>Sabot: {gameState.deckRemainingCount}</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
-              <Coins size={14} className="text-amber-400" />
-              Mise : {gameState.bet} CR
+            <span className="flex items-center gap-1 text-amber-400">
+              <Coins size={12} />
+              {gameState.bet} CR
             </span>
           </div>
         )}
@@ -57,31 +48,26 @@ export const TablePage: React.FC = () => {
         {credits === 0 ? (
           <button
             onClick={() => setIsFailsafeOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-600/90 border border-rose-400 text-white text-xs font-black shadow-lg animate-bounce"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-600 border border-rose-400 text-white text-[11px] font-black shadow animate-pulse"
           >
-            <LifeBuoy size={15} />
-            <span>Bankroll Vide (+1000 CR)</span>
+            <LifeBuoy size={13} />
+            <span>+1000 CR</span>
           </button>
         ) : (
-          <div className="w-24"></div>
+          <div className="w-12"></div>
         )}
       </div>
 
       {error && (
-        <div className="z-20 my-2 px-4 py-2 rounded-xl bg-rose-950/90 border border-rose-600 text-rose-200 text-xs font-bold text-center shadow-xl">
+        <div className="z-20 my-1 px-3 py-1 rounded-xl bg-rose-950/90 border border-rose-600 text-rose-200 text-[11px] font-bold text-center">
           {error}
         </div>
       )}
 
-      {/* Main Table Felt Area */}
-      <div className="w-full max-w-4xl flex flex-col items-center justify-center gap-4 my-auto py-2 z-10 relative">
+      {/* Felt Playing Area */}
+      <div className="w-full flex-1 flex flex-col justify-center items-center gap-3 my-auto z-10 relative max-w-md">
         
-        {/* Shoe Stack / Deck Pile Positioned on the Right Side of Table */}
-        <div className="absolute right-0 top-0 hidden sm:block z-20">
-          <DeckPile remainingCount={deckRemaining} />
-        </div>
-
-        {/* Dealer Area (Card 1 at 0.35s, Card 2 at 1.05s) */}
+        {/* Dealer Area */}
         {gameState ? (
           <HandDisplay
             title="Croupier"
@@ -92,21 +78,18 @@ export const TablePage: React.FC = () => {
             cardDelayOffset={0.35}
           />
         ) : (
-          <div className="text-center p-4 rounded-2xl bg-slate-950/40 border border-slate-800/60 flex items-center gap-2 text-emerald-300">
-            <Dices size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">
-              Placez votre mise pour commencer
-            </span>
+          <div className="text-center py-2 px-4 rounded-xl bg-slate-950/50 border border-slate-800 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+            Placez votre mise
           </div>
         )}
 
-        {/* Player Hands Area (Card 1 at 0.0s, Card 2 at 0.7s) */}
+        {/* Player Hands */}
         {gameState && (
-          <div className="flex flex-wrap justify-center gap-4 w-full">
+          <div className="flex justify-center gap-2 w-full">
             {gameState.hands.map((hand, idx) => (
               <HandDisplay
                 key={hand.id}
-                title={gameState.hands.length > 1 ? `Main #${idx + 1}` : 'Joueur'}
+                title={gameState.hands.length > 1 ? `Main ${idx + 1}` : 'Joueur'}
                 cards={hand.cards}
                 score={hand.score}
                 isSoft={hand.isSoft}
@@ -120,20 +103,19 @@ export const TablePage: React.FC = () => {
           </div>
         )}
 
-        {/* Game Result Banner (shows result & gain inline without blocking betting chips) */}
         <GameResultBanner />
+      </div>
 
-        {/* Action Controls / Betting Controls — ALWAYS visible when not playing so player can bet directly */}
-        <div className="w-full flex justify-center mt-2">
-          {!isPlaying ? (
-            <BettingPanel />
-          ) : (
-            <ActionButtons
-              activeHand={activeHand}
-              isInsuranceOffer={gameState.status === 'INSURANCE_OFFER'}
-            />
-          )}
-        </div>
+      {/* Fixed Bottom Action / Betting Area */}
+      <div className="w-full max-w-md z-20">
+        {!isPlaying ? (
+          <BettingPanel />
+        ) : (
+          <ActionButtons
+            activeHand={activeHand}
+            isInsuranceOffer={gameState.status === 'INSURANCE_OFFER'}
+          />
+        )}
       </div>
 
       {/* Modals */}

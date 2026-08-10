@@ -6,12 +6,8 @@ const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
     return `${import.meta.env.VITE_API_URL}/api`;
   }
-  // Local dev or same-host access
-  const { hostname, protocol } = window.location;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return '/api';
-  }
-  return `${protocol}//${hostname}:3001/api`;
+  // Always relative /api so Vite proxy handles it locally and through tunnels
+  return '/api';
 };
 
 const api = axios.create({
