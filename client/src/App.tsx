@@ -6,6 +6,7 @@ import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
 import { AuthPage } from './pages/AuthPage';
 import { TablePage } from './pages/TablePage';
+import { MobileTablePage } from './pages/MobileTablePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StatsPage } from './pages/StatsPage';
 import { HistoryPage } from './pages/HistoryPage';
@@ -37,7 +38,16 @@ export const App: React.FC = () => {
 
           <main className="flex-1 w-full overflow-y-auto">
             <Routes>
-              <Route path="/" element={<TablePage />} />
+              <Route path="/" element={
+                <div className="w-full h-full">
+                  <div className="block md:hidden h-full">
+                    <MobileTablePage />
+                  </div>
+                  <div className="hidden md:block h-full">
+                    <TablePage />
+                  </div>
+                </div>
+              } />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/history" element={<HistoryPage />} />
