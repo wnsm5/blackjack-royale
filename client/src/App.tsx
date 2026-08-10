@@ -5,7 +5,8 @@ import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
 import { AuthPage } from './pages/AuthPage';
-import { MobileTablePage } from './pages/MobileTablePage';
+import { TablePage } from './pages/TablePage';
+import { DedicatedMobileApp } from './pages/DedicatedMobileApp';
 import { ProfilePage } from './pages/ProfilePage';
 import { StatsPage } from './pages/StatsPage';
 import { HistoryPage } from './pages/HistoryPage';
@@ -27,21 +28,26 @@ export const App: React.FC = () => {
     return <AuthPage />;
   }
 
+  // Detect mobile width directly
+  const isMobile = window.innerWidth < 768;
+
+  // On Mobile: Render completely standalone DedicatedMobileApp without any Desktop Navbar/Sidebar/BottomNav wrappers
+  if (isMobile) {
+    return <DedicatedMobileApp />;
+  }
+
+  // On Desktop: Render full Desktop Layout
   return (
     <Router>
-      {/* 
-        h-[100dvh] forces the app to fit EXACTLY the mobile screen.
-        overflow-hidden prevents ANY window scrollbar on phones.
-      */}
-      <div className="h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none">
         <Navbar />
 
-        <div className="flex-1 flex w-full overflow-hidden">
+        <div className="flex-1 flex w-full">
           <Sidebar />
 
-          <main className="flex-1 w-full h-full overflow-y-auto">
+          <main className="flex-1 w-full overflow-y-auto">
             <Routes>
-              <Route path="/" element={<MobileTablePage />} />
+              <Route path="/" element={<TablePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/history" element={<HistoryPage />} />
@@ -53,8 +59,6 @@ export const App: React.FC = () => {
             </Routes>
           </main>
         </div>
-
-        <BottomNav />
       </div>
     </Router>
   );
