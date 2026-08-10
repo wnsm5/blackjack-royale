@@ -9,7 +9,7 @@ import { AchievementService } from './services/achievementService';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({
@@ -18,6 +18,11 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Root endpoint for Render scanner
+app.get('/', (req, res) => {
+  res.send('Blackjack API is running!');
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
