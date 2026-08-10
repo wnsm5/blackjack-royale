@@ -28,8 +28,14 @@ export const App: React.FC = () => {
     return <AuthPage />;
   }
 
-  // Detect mobile width directly
-  const isMobile = window.innerWidth < 768;
+  // Dynamic mobile detection that responds to window resizing & touch devices
+  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // On Mobile: Render completely standalone DedicatedMobileApp without any Desktop Navbar/Sidebar/BottomNav wrappers
   if (isMobile) {
