@@ -1,6 +1,6 @@
 import './polyfill';
 import { registerRootComponent } from 'expo';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,7 +12,7 @@ import {
   Modal,
   Animated,
   Easing,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import {
   ShoppingBag,
@@ -293,8 +293,8 @@ function App() {
     highestLoss: -50,
   });
 
-  // Screen width for paging scroll
-  const screenWidth = Dimensions.get('window').width;
+  // Screen dimensions for paging scroll
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const tabScrollRef = useRef(null);
 
   // Page Transition Animations (subSectionSlideAnim still used for profile sub-section slide)
@@ -360,6 +360,15 @@ function App() {
     setActiveTab(newTab);
     setProfileSubSection(null);
   };
+
+  // Sync paging scroll position whenever activeTab changes (e.g. returning from GAME)
+  useEffect(() => {
+    if (activeTab === 'HOME') {
+      tabScrollRef.current?.scrollTo({ x: 0, animated: false });
+    } else if (activeTab === 'PROFILE') {
+      tabScrollRef.current?.scrollTo({ x: screenWidth, animated: false });
+    }
+  }, [activeTab, screenWidth]);
 
   // Handle Opening Sub-Section with Slide Up Animation
   const openSubSection = (section) => {
@@ -1122,11 +1131,11 @@ function App() {
           scrollEnabled={profileSubSection === null}
           onMomentumScrollEnd={handleTabScrollEnd}
           style={styles.mainContent}
-          contentContainerStyle={{ flexGrow: 1 }}
+          bounces={false}
         >
 
           {/* PAGE 0: ACCUEIL */}
-          <View style={{ width: screenWidth, flex: 1 }}>
+          <View style={{ width: screenWidth, height: screenHeight }}>
             <ScrollView contentContainerStyle={styles.homeScroll}>
               <View style={styles.homeHeroCard}>
                 <Text style={styles.heroLabel}>SOLDE DISPONIBLE</Text>
@@ -1174,7 +1183,7 @@ function App() {
           </View>
 
           {/* PAGE 1: PROFIL */}
-          <View style={{ width: screenWidth, flex: 1, backgroundColor: '#000000' }}>
+          <View style={{ width: screenWidth, height: screenHeight, backgroundColor: '#000000' }}>
             {profileSubSection && (
               <View style={styles.stickySubHeaderBar}>
                 <TouchableOpacity 
