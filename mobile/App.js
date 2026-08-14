@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
   PanResponder,
+  TextInput,
 } from 'react-native';
 import {
   ShoppingBag,
@@ -42,7 +43,8 @@ import {
   TrendingDown,
   Activity,
   Target,
-  RotateCcw
+  RotateCcw,
+  Edit3
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -268,6 +270,19 @@ function App() {
   const [gameResult, setGameResult] = useState(null);
   const [isDealing, setIsDealing] = useState(false);
   const [hasInsurance, setHasInsurance] = useState(false);
+
+  // User Profile State (Default: user_XXXX with random digits)
+  const [username, setUsername] = useState(() => `user_${Math.floor(1000 + Math.random() * 9000)}`);
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  const handleSaveUsername = () => {
+    const trimmed = nameInput.trim();
+    if (trimmed.length >= 2) {
+      setUsername(trimmed);
+      setShowEditNameModal(false);
+    }
+  };
 
   // Shoe / Pioche state (6 decks = 312 cards)
   const [cardsRemaining, setCardsRemaining] = useState(312);
@@ -1536,7 +1551,19 @@ function App() {
                   {profileSubSection === 'SETTINGS' && (
                     <View style={styles.subCard}>
                       <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
-                      <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
+
+                      <View style={styles.settingRowItem}>
+                        <Text style={styles.subText}>• Pseudo : <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>{username}</Text></Text>
+                        <TouchableOpacity 
+                          style={styles.editNameSmallBtn} 
+                          onPress={() => { setNameInput(username); setShowEditNameModal(true); }}
+                          activeOpacity={0.7}
+                        >
+                          <Edit3 size={13} color="#f43f5e" />
+                          <Text style={styles.editNameSmallBtnText}>MODIFIER</Text>
+                        </TouchableOpacity>
+                      </View>
+
                       <Text style={styles.subText}>• Effets sonores : Activé</Text>
                       <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit OLED</Text>
                       <Text style={styles.subText}>• Version App : 2.6.0 Standalone Native</Text>
@@ -1558,7 +1585,7 @@ function App() {
                     <View style={styles.avatarCircle}>
                       <User size={28} color="#ffffff" />
                     </View>
-                    <Text style={styles.profileUsername}>Offsuit_Player</Text>
+                    <Text style={styles.profileUsername}>{username}</Text>
                     <Text style={styles.profileLevelText}>Joueur Niveau 5 • {credits} CR</Text>
                   </View>
 
@@ -1682,6 +1709,42 @@ function App() {
         </View>
       </Modal>
 
+      {/* MODAL DE CHANGER LE PSEUDO */}
+      <Modal
+        visible={showEditNameModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditNameModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.leaveModalBox}>
+            <Text style={styles.modalTitle}>MODIFIER LE PSEUDO</Text>
+            <Text style={styles.modalSubText}>Choisissez votre nouveau pseudo :</Text>
+
+            <TextInput
+              style={styles.usernameInput}
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="ex: user_1234"
+              placeholderTextColor="#525252"
+              maxLength={16}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowEditNameModal(false)}>
+                <Text style={styles.modalCancelBtnText}>ANNULER</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleSaveUsername}>
+                <Text style={styles.modalConfirmBtnText}>ENREGISTRER</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -1793,6 +1856,42 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: '#4ade80',
+  },
+  settingRowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  editNameSmallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#1f1214',
+    borderColor: '#4c1d24',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  editNameSmallBtnText: {
+    color: '#f43f5e',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  usernameInput: {
+    backgroundColor: '#0a0a0a',
+    borderColor: '#262626',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginVertical: 14,
+    textAlign: 'center',
   },
   failsafeBtnText: {
     color: '#ffffff',
