@@ -36,26 +36,33 @@ import {
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
-// Custom authentic Casino Chip component
-function CasinoChip({ value, onPress }) {
+// Custom sleek Casino Chip component (Refined Minimalist Design)
+function CasinoChip({ value, onPress, size = 36 }) {
   const chipColors = {
-    1: { bg: '#262626', border: '#525252', text: '#ffffff', stripe: '#404040' },
-    2: { bg: '#991b1b', border: '#fca5a5', text: '#fef2f2', stripe: '#b91c1c' },
-    5: { bg: '#15803d', border: '#86efac', text: '#f0fdf4', stripe: '#166534' },
-    10: { bg: '#1d4ed8', border: '#93c5fd', text: '#eff6ff', stripe: '#1e40af' },
-    20: { bg: '#d97706', border: '#fde047', text: '#fefce8', stripe: '#b45309' },
-  }[value] || { bg: '#262626', border: '#525252', text: '#ffffff', stripe: '#404040' };
+    1: { bg: '#262626', border: '#525252', text: '#ffffff', accent: '#404040' },
+    2: { bg: '#8f1d1d', border: '#fca5a5', text: '#ffffff', accent: '#b91c1c' },
+    5: { bg: '#15803d', border: '#86efac', text: '#ffffff', accent: '#166534' },
+    10: { bg: '#1d4ed8', border: '#93c5fd', text: '#ffffff', accent: '#1e40af' },
+    20: { bg: '#b45309', border: '#fde047', text: '#ffffff', accent: '#d97706' },
+  }[value] || { bg: '#262626', border: '#525252', text: '#ffffff', accent: '#404040' };
 
   return (
     <TouchableOpacity
-      style={[styles.casinoChip, { backgroundColor: chipColors.bg, borderColor: chipColors.border }]}
+      style={[
+        styles.casinoChip,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: chipColors.bg,
+          borderColor: chipColors.border,
+        },
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <View style={[styles.chipInnerRing, { borderColor: chipColors.stripe }]}>
-        <View style={styles.chipCenterCircle}>
-          <Text style={[styles.chipValueText, { color: chipColors.text }]}>{value}</Text>
-        </View>
+      <View style={[styles.chipInnerRing, { borderColor: chipColors.accent, borderRadius: (size - 6) / 2 }]}>
+        <Text style={[styles.chipValueText, { color: chipColors.text, fontSize: size < 30 ? 9 : 11 }]}>{value}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -224,11 +231,14 @@ function App() {
     }
   };
 
-  const handleRemoveChip = (idx) => {
+  const handleRemoveChip = (valToRemove) => {
     if (isDealing) return;
-    const newChips = betChips.filter((_, i) => i !== idx);
-    setBetChips(newChips);
-    setCurrentBet(newChips.reduce((a, c) => a + c, 0));
+    const idx = betChips.indexOf(valToRemove);
+    if (idx !== -1) {
+      const newChips = betChips.filter((_, i) => i !== idx);
+      setBetChips(newChips);
+      setCurrentBet(newChips.reduce((a, c) => a + c, 0));
+    }
   };
 
   const handleClearChips = () => {
@@ -619,11 +629,17 @@ function App() {
   const canSplit = game && game.status === 'PLAYING' && !game.isSplit && game.playerHand.length === 2 && (game.playerHand[0].val === game.playerHand[1].val) && credits >= game.bet && !isDealing;
   const canInsurance = game && game.status === 'PLAYING' && game.dealerHand.length >= 1 && game.dealerHand[0].rank === 'A' && !hasInsurance && credits >= Math.floor(game.bet / 2) && !isDealing;
 
+  // Group bet chips by value for clean summary
+  const chipCounts = betChips.reduce((acc, val) => {
+    acc[val] = (acc[val] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
-      {/* HEADER DE TABLE SEULEMENT EN JEU (AVEC BOUTON QUITTER ET SOLDE) */}
+      {/* HEADER DE TABLE SEULEMENT EN JEU */}
       {activeTab === 'GAME' && (
         <View style={styles.header}>
           <TouchableOpacity style={styles.leaveHeaderBtn} onPress={() => setShowLeaveModal(true)}>
@@ -797,7 +813,7 @@ function App() {
               </View>
             </View>
 
-            {/* CONTROLES DE MANCHE */}
+            {/* CONTROLES DE MANCHE & DE MISE ÉPURÉS */}
             <View style={styles.gameControlsPanel}>
               {game && game.status === 'PLAYING' ? (
                 <View style={styles.actionRowContainer}>
@@ -857,21 +873,32 @@ function App() {
                     </View>
                   </View>
 
-                  <View style={styles.stackedChipsRow}>
+                  {/* RÉSUMÉ SOMBRE ET ÉPURÉ DES JETONS SÉLECTIONNÉS */}
+                  <View style={styles.compactBetChipsRow}>
                     {betChips.length === 0 ? (
-                      <Text style={styles.noChipsHint}>Touche un jeton pour miser</Text>
+                      <Text style={styles.noChipsHint}>Touche un jeton ci-dessous pour miser</Text>
                     ) : (
-                      betChips.map((val, i) => (
-                        <View key={i} style={{ marginLeft: i > 0 ? -16 : 0, zIndex: i }}>
-                          <CasinoChip value={val} onPress={() => handleRemoveChip(i)} />
-                        </View>
-                      ))
+                      Object.entries(chipCounts).map(([valStr, count]) => {
+                        const val = parseInt(valStr);
+                        return (
+                          <TouchableOpacity
+                            key={val}
+                            style={styles.chipSummaryBadge}
+                            onPress={() => handleRemoveChip(val)}
+                            activeOpacity={0.7}
+                          >
+                            <CasinoChip value={val} size={24} />
+                            {count > 1 && <Text style={styles.chipCountText}>x{count}</Text>}
+                          </TouchableOpacity>
+                        );
+                      })
                     )}
                   </View>
 
+                  {/* BARRE DE JETONS ULTRA COMPACTE (36px) */}
                   <View style={styles.chipBar}>
                     {CHIP_VALUES.map((val) => (
-                      <CasinoChip key={val} value={val} onPress={() => handleAddChip(val)} />
+                      <CasinoChip key={val} value={val} size={36} onPress={() => handleAddChip(val)} />
                     ))}
                   </View>
 
@@ -1620,51 +1647,64 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 10,
   },
-  stackedChipsRow: {
+  
+  /* DESIGN DES JETONS SÉLECTIONNÉS ÉPURÉ & COMPACT (AUCUN ENCOMBREMENT) */
+  compactBetChipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 46,
+    gap: 8,
+    minHeight: 34,
+    marginVertical: 4,
+  },
+  chipSummaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#171717',
+    paddingRight: 8,
+    paddingLeft: 4,
+    paddingVertical: 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#262626',
+    gap: 4,
+  },
+  chipCountText: {
+    color: '#e5e5e5',
+    fontWeight: '900',
+    fontSize: 11,
   },
   noChipsHint: {
-    color: '#404040',
-    fontSize: 11,
+    color: '#525252',
+    fontSize: 10,
+    fontWeight: '700',
     fontStyle: 'italic',
   },
+
+  /* BARRE DE JETONS 36PX COMPACTE ET SOMBRE */
   chipBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 10,
+    marginVertical: 8,
+    paddingHorizontal: 12,
   },
   casinoChip: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipInnerRing: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderStyle: 'solid',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  chipCenterCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#0a0a0a',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: '84%',
+    height: '84%',
   },
   chipValueText: {
     fontWeight: '900',
-    fontSize: 11,
   },
+
   dealBtn: {
     backgroundColor: '#e11d48',
     paddingVertical: 14,
