@@ -41,7 +41,8 @@ import {
   Check,
   TrendingDown,
   Activity,
-  Target
+  Target,
+  RotateCcw
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -275,23 +276,31 @@ function App() {
   const [cardBackSkins, setCardBackSkins] = useState(INITIAL_CARD_BACKS);
   const [equippedCardBackId, setEquippedCardBackId] = useState('ROUGE_OFFSUIT');
 
-  // Solde history tracking for progression chart
-  const [balanceHistory, setBalanceHistory] = useState([100, 110, 100, 120, 110, 130, 125, 140, 100]);
+  // Solde history tracking for progression chart (starts with initial balance)
+  const [balanceHistory, setBalanceHistory] = useState([100]);
 
-  // Decision Tracking Stats
+  // Decision Tracking Stats (starts at 0)
   const [decisionStats, setDecisionStats] = useState({
-    hits: 24,
-    stands: 18,
-    doubles: 6,
-    splits: 3,
+    hits: 0,
+    stands: 0,
+    doubles: 0,
+    splits: 0,
   });
 
-  // Financial Records State
+  // Financial Records State (starts at 0)
   const [financialRecords, setFinancialRecords] = useState({
-    highestBet: 50,
-    highestWin: 100,
-    highestLoss: -50,
+    highestBet: 0,
+    highestWin: 0,
+    highestLoss: 0,
   });
+
+  // Reset all stats & history
+  const handleResetStats = () => {
+    setHistory([]);
+    setBalanceHistory([credits]);
+    setDecisionStats({ hits: 0, stands: 0, doubles: 0, splits: 0 });
+    setFinancialRecords({ highestBet: 0, highestWin: 0, highestLoss: 0 });
+  };
 
   // Animations
   const subSectionSlideAnim = useRef(new Animated.Value(250)).current;
@@ -1390,6 +1399,12 @@ function App() {
                           <Text style={styles.decisionValue}>{decisionStats.splits} fois ({splitPct}%)</Text>
                         </View>
                       </View>
+
+                      {/* BOUTON DE RÉINITIALISATION DE TOUTES LES STATS */}
+                      <TouchableOpacity style={styles.resetStatsBtn} onPress={handleResetStats} activeOpacity={0.8}>
+                        <RotateCcw size={14} color="#f43f5e" />
+                        <Text style={styles.resetStatsBtnText}>RÉINITIALISER LES STATISTIQUES</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
 
@@ -1525,6 +1540,13 @@ function App() {
                       <Text style={styles.subText}>• Effets sonores : Activé</Text>
                       <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit OLED</Text>
                       <Text style={styles.subText}>• Version App : 2.6.0 Standalone Native</Text>
+
+                      <View style={{ marginTop: 16 }}>
+                        <TouchableOpacity style={styles.resetStatsBtn} onPress={handleResetStats} activeOpacity={0.8}>
+                          <RotateCcw size={14} color="#f43f5e" />
+                          <Text style={styles.resetStatsBtnText}>RÉINITIALISER STATS & HISTORIQUE</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
 
@@ -1796,6 +1818,25 @@ const styles = StyleSheet.create({
     color: '#525252',
     fontSize: 13,
     fontWeight: '600',
+  },
+  resetStatsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1f1214',
+    borderColor: '#4c1d24',
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 14,
+  },
+  resetStatsBtnText: {
+    color: '#f43f5e',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   sectionTitle: {
     color: '#737373',
