@@ -74,6 +74,60 @@ const INITIAL_CARD_BACKS = [
   { id: 'BRONZE_ARMOR', name: 'Bronze Tactique', bg: '#78350f', innerBg: '#451a03', border: '#d97706', pattern: 'bronze_mesh', price: 400, unlocked: true },
 ];
 
+// GEM LOSANGE AVEC FACETTES GRISES (pas d'emoji, pas de Lucide)
+function GemDiamond({ size = 16, color = '#22c55e' }) {
+  const s = size;
+  const half = s / 2;
+  const topH = s * 0.35;  // hauteur de la couronne
+  const midH = s * 0.22;  // largeur des côtés du milieu
+  const facetColor = 'rgba(180,180,180,0.35)';
+  return (
+    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Ombre portée légère */}
+      <View style={{
+        position: 'absolute',
+        width: s * 0.8,
+        height: s * 0.8,
+        borderRadius: 2,
+        transform: [{ rotate: '45deg' }],
+        backgroundColor: color,
+        opacity: 0.12,
+        top: s * 0.1,
+        left: s * 0.1,
+      }} />
+      {/* Losange principal */}
+      <View style={{
+        width: s * 0.72,
+        height: s * 0.72,
+        borderRadius: 2,
+        transform: [{ rotate: '45deg' }],
+        backgroundColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {/* Facette diagonale haut-gauche → bas-droite */}
+        <View style={{
+          position: 'absolute',
+          width: 1,
+          height: s * 0.9,
+          backgroundColor: facetColor,
+          transform: [{ rotate: '0deg' }],
+          left: '38%',
+        }} />
+        {/* Facette horizontale centrale */}
+        <View style={{
+          position: 'absolute',
+          height: 1,
+          width: s * 0.9,
+          backgroundColor: facetColor,
+          top: '40%',
+        }} />
+      </View>
+    </View>
+  );
+}
+
 // Rich Pattern Component for Card Backs (Authentic unique geometry per skin)
 function CardBackVisual({ skin, width = 58, height = 84 }) {
   const cornerRadius = Math.round(width * 0.14);
@@ -1327,10 +1381,10 @@ function App() {
         </View>
       )}
 
-      {/* GEMS EN HAUT À GAUCHE — ICÔNE VERTE + CHIFFRE VERT, PAS DE LABEL */}
+      {/* GEMS EN HAUT À GAUCHE — LOSANGE + CHIFFRE VERT */}
       {activeTab !== 'GAME' && profileSubSection === null && (
         <View style={styles.topLeftGemsBar}>
-          <Gem size={16} color="#22c55e" fill="#16a34a" />
+          <GemDiamond size={18} color="#22c55e" />
           <Text style={styles.gemsTagText}>{gems}</Text>
         </View>
       )}
@@ -1358,7 +1412,7 @@ function App() {
                 activeOpacity={0.7}
               >
                 <View style={styles.shopRechargeLeft}>
-                  <Gem size={16} color="#22c55e" fill="#16a34a" />
+                  <GemDiamond size={18} color="#22c55e" />
                   <View>
                     <Text style={styles.shopRechargeTitle}>Recharge quotidienne</Text>
                     <Text style={styles.shopRechargeDesc}>Obtenir +50 Gems gratuitement</Text>
@@ -1367,28 +1421,26 @@ function App() {
                 <ChevronRight size={16} color="#525252" />
               </TouchableOpacity>
 
-              {/* COFFRES */}
+              {/* COFFRES — GRILLE 2 COLONNES (même style que sélection dos de cartes) */}
               <Text style={styles.shopSectionLabel}>COFFRES</Text>
-              {CHESTS.map((chest) => (
-                <TouchableOpacity
-                  key={chest.id}
-                  style={styles.chestRow}
-                  onPress={() => handleBuyChest(chest)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.chestRowLeft}>
-                    <Package size={20} color="#a3a3a3" />
-                    <View>
-                      <Text style={styles.chestRowName}>{chest.name}</Text>
-                      <Text style={styles.chestRowDesc}>{chest.desc}</Text>
+              <View style={styles.chestsGrid}>
+                {CHESTS.map((chest) => (
+                  <TouchableOpacity
+                    key={chest.id}
+                    style={styles.chestCell}
+                    onPress={() => handleBuyChest(chest)}
+                    activeOpacity={0.8}
+                  >
+                    <GemDiamond size={32} color={chest.color} />
+                    <Text style={styles.chestCellName}>{chest.name}</Text>
+                    <Text style={styles.chestCellDesc}>{chest.desc}</Text>
+                    <View style={styles.chestCellPrice}>
+                      <GemDiamond size={11} color="#22c55e" />
+                      <Text style={styles.chestCellPriceText}>{chest.cost}</Text>
                     </View>
-                  </View>
-                  <View style={styles.chestRowPrice}>
-                    <Gem size={12} color="#22c55e" fill="#16a34a" />
-                    <Text style={styles.chestRowPriceText}>{chest.cost}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))}
+              </View>
 
             </ScrollView>
           )}
@@ -1998,7 +2050,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginBottom: 6,
+    marginBottom: 12,
   },
   shopRechargeLeft: {
     flexDirection: 'row',
@@ -2021,45 +2073,47 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
-    marginTop: 10,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  chestRow: {
+  chestsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    backgroundColor: '#0d0d0d',
-    borderColor: '#1c1c1c',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 6,
+    gap: 10,
   },
-  chestRowLeft: {
+  chestCell: {
+    width: '48%',
+    backgroundColor: '#050505',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1c1c1c',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    gap: 6,
+  },
+  chestCellName: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  chestCellDesc: {
+    color: '#525252',
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  chestCellPrice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  chestRowName: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  chestRowDesc: {
-    color: '#525252',
-    fontSize: 11,
-    fontWeight: '500',
+    gap: 3,
     marginTop: 2,
   },
-  chestRowPrice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  chestRowPriceText: {
+  chestCellPriceText: {
     color: '#22c55e',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
   header: {
