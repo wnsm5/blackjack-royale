@@ -1,5 +1,8 @@
-// EARLY POLYFILL SCRIPT - Loaded by Metro before setupDOM / module initialization
+// EARLY POLYFILL SCRIPT - Injected by Metro before React Native runtime initialization
 (function () {
+  var target = typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this;
+  if (!target) return;
+
   function DOMRectPolyfill(x, y, w, h) {
     this.x = Number(x) || 0;
     this.y = Number(y) || 0;
@@ -23,38 +26,37 @@
   DOMRectReadOnlyPolyfill.fromRect = DOMRectPolyfill.fromRect;
   DOMRectReadOnlyPolyfill.prototype = DOMRectPolyfill.prototype;
 
-  var targets = [
-    typeof globalThis !== 'undefined' ? globalThis : null,
-    typeof global !== 'undefined' ? global : null,
-    typeof window !== 'undefined' ? window : null,
-  ];
+  function DOMPointPolyfill(x, y, z, w) {
+    this.x = Number(x) || 0;
+    this.y = Number(y) || 0;
+    this.z = Number(z) || 0;
+    this.w = Number(w) || 1;
+  }
 
-  targets.forEach(function (target) {
-    if (!target) return;
+  function DOMMatrixPolyfill() {
+    this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+  }
 
-    if (typeof target.DOMRect === 'undefined') {
+  const polyfills = {
+    DOMRect: DOMRectPolyfill,
+    DOMRectReadOnly: DOMRectReadOnlyPolyfill,
+    DOMPoint: DOMPointPolyfill,
+    DOMPointReadOnly: DOMPointPolyfill,
+    DOMMatrix: DOMMatrixPolyfill,
+    DOMMatrixReadOnly: DOMMatrixPolyfill,
+  };
+
+  Object.keys(polyfills).forEach(function (key) {
+    if (typeof target[key] === 'undefined') {
       try {
-        Object.defineProperty(target, 'DOMRect', {
-          value: DOMRectPolyfill,
+        Object.defineProperty(target, key, {
+          value: polyfills[key],
           writable: true,
           configurable: true,
           enumerable: false,
         });
       } catch (e) {
-        target.DOMRect = DOMRectPolyfill;
-      }
-    }
-
-    if (typeof target.DOMRectReadOnly === 'undefined') {
-      try {
-        Object.defineProperty(target, 'DOMRectReadOnly', {
-          value: DOMRectReadOnlyPolyfill,
-          writable: true,
-          configurable: true,
-          enumerable: false,
-        });
-      } catch (e) {
-        target.DOMRectReadOnly = DOMRectReadOnlyPolyfill;
+        target[key] = polyfills[key];
       }
     }
   });
