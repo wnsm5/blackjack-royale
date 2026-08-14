@@ -1,3 +1,21 @@
+// Global polyfill for web APIs missing in React Native Hermes engine
+if (typeof global.DOMRect === 'undefined') {
+  (global as any).DOMRect = class DOMRect {
+    x: number; y: number; width: number; height: number;
+    top: number; right: number; bottom: number; left: number;
+    constructor(x = 0, y = 0, width = 0, height = 0) {
+      this.x = x; this.y = y; this.width = width; this.height = height;
+      this.top = y; this.left = x; this.right = x + width; this.bottom = y + height;
+    }
+    static fromRect(rect?: { x?: number; y?: number; width?: number; height?: number }) {
+      return new DOMRect(rect?.x, rect?.y, rect?.width, rect?.height);
+    }
+    toJSON() {
+      return { x: this.x, y: this.y, width: this.width, height: this.height, top: this.top, right: this.right, bottom: this.bottom, left: this.left };
+    }
+  };
+}
+
 import React, { useState } from 'react';
 import {
   StyleSheet,
