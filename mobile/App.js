@@ -1,29 +1,4 @@
-// Robust inline DOMRect polyfill for React Native / Hermes engine
-if (typeof globalThis.DOMRect === 'undefined') {
-  function DOMRectPolyfill(x, y, w, h) {
-    this.x = Number(x) || 0;
-    this.y = Number(y) || 0;
-    this.width = Number(w) || 0;
-    this.height = Number(h) || 0;
-    this.top = this.y;
-    this.left = this.x;
-    this.right = this.x + this.width;
-    this.bottom = this.y + this.height;
-  }
-  DOMRectPolyfill.fromRect = function (r) {
-    return new DOMRectPolyfill(r && r.x, r && r.y, r && r.width, r && r.height);
-  };
-  DOMRectPolyfill.prototype.toJSON = function () {
-    return { x: this.x, y: this.y, width: this.width, height: this.height, top: this.top, right: this.right, bottom: this.bottom, left: this.left };
-  };
-  try {
-    Object.defineProperty(globalThis, 'DOMRect', { value: DOMRectPolyfill, writable: true, configurable: true });
-  } catch (e) {
-    globalThis.DOMRect = DOMRectPolyfill;
-  }
-  if (typeof global !== 'undefined') global.DOMRect = DOMRectPolyfill;
-}
-
+import './polyfill';
 import { registerRootComponent } from 'expo';
 import React, { useState } from 'react';
 import {
