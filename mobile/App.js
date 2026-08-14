@@ -1,4 +1,4 @@
-import './index.js';
+import { registerRootComponent } from 'expo';
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -10,13 +10,13 @@ import {
   ScrollView,
 } from 'react-native';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'HOME' | 'GAME'>('HOME');
+function App() {
+  const [activeTab, setActiveTab] = useState('HOME');
   const [credits, setCredits] = useState(100);
   const [currentBet, setCurrentBet] = useState(10);
-  const [betChips, setBetChips] = useState<number[]>([]);
+  const [betChips, setBetChips] = useState([]);
 
-  const handleAddChip = (val: number) => {
+  const handleAddChip = (val) => {
     const total = betChips.reduce((a, c) => a + c, 0);
     if (total + val <= credits) {
       const newChips = [...betChips, val];
@@ -25,16 +25,21 @@ export default function App() {
     }
   };
 
-  const handleRemoveChip = (idx: number) => {
+  const handleRemoveChip = (idx) => {
     const newChips = betChips.filter((_, i) => i !== idx);
     setBetChips(newChips);
     setCurrentBet(newChips.reduce((a, c) => a + c, 0));
   };
 
+  const handleClearChips = () => {
+    setBetChips([]);
+    setCurrentBet(0);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#020617" />
-      
+
       {/* HEADER PERMANENT */}
       <View style={styles.header}>
         <View style={styles.brandGroup}>
@@ -59,30 +64,31 @@ export default function App() {
         )}
       </View>
 
-      {/* BODY SCREEN */}
+      {/* CONTENU NAVIGATION */}
       {activeTab === 'HOME' ? (
         <ScrollView contentContainerStyle={styles.homeContent}>
-          <Text style={styles.welcomeTitle}>Bienvenue au Casino Natif</Text>
-          <Text style={styles.welcomeSub}>Application React Native Expo 100% rapide</Text>
+          <Text style={styles.welcomeTitle}>Application Natif Expo</Text>
+          <Text style={styles.welcomeSub}>Blackjack iOS & Android sans aucun délai</Text>
 
           <TouchableOpacity style={styles.bigPlayBtn} onPress={() => setActiveTab('GAME')}>
             <Text style={styles.bigPlayBtnText}>LANCER UNE PARTIE ♠</Text>
           </TouchableOpacity>
 
           <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>Table de Blackjack Locale</Text>
-            <Text style={styles.statsText}>• Réseau ultra-rapide</Text>
+            <Text style={styles.statsTitle}>Casino Mobile Natif</Text>
+            <Text style={styles.statsText}>• Réseau ultra-rapide & fluide</Text>
             <Text style={styles.statsText}>• 0 décalage, 0 écran noir</Text>
-            <Text style={styles.statsText}>• Jetons 1, 2, 5, 10, 20</Text>
+            <Text style={styles.statsText}>• Jetons : 1, 2, 5, 10, 20 CR</Text>
+            <Text style={styles.statsText}>• Solde initial : 100 CR</Text>
           </View>
         </ScrollView>
       ) : (
         <View style={styles.gameContent}>
-          {/* TAPIS DE JEU */}
+          {/* TAPIS DE JEU VERTS */}
           <View style={styles.tableFelt}>
             <Text style={styles.feltLabel}>CROUPIER (Score: 18)</Text>
-            
-            {/* Dealer Cards */}
+
+            {/* Cartes Croupier */}
             <View style={styles.cardsRow}>
               <View style={styles.cardFront}>
                 <Text style={styles.cardRankRed}>K</Text>
@@ -95,8 +101,8 @@ export default function App() {
             </View>
 
             <Text style={styles.feltLabel}>JOUEUR (Score: 20)</Text>
-            
-            {/* Player Cards */}
+
+            {/* Cartes Joueur */}
             <View style={styles.cardsRow}>
               <View style={styles.cardFront}>
                 <Text style={styles.cardRankBlack}>10</Text>
@@ -109,20 +115,31 @@ export default function App() {
             </View>
           </View>
 
-          {/* CHIPS AND BETTING CONTROL */}
+          {/* PANNEAU DE MISE ET JETONS */}
           <View style={styles.bettingPanel}>
-            <Text style={styles.betTitle}>Mise actuelle : {currentBet} CR</Text>
-
-            {/* Placed chips */}
-            <View style={styles.placedChipsRow}>
-              {betChips.map((val, i) => (
-                <TouchableOpacity key={i} style={styles.placedChip} onPress={() => handleRemoveChip(i)}>
-                  <Text style={styles.placedChipText}>{val}</Text>
+            <View style={styles.betTitleRow}>
+              <Text style={styles.betTitle}>Mise actuelle : {currentBet} CR</Text>
+              {betChips.length > 0 && (
+                <TouchableOpacity onPress={handleClearChips}>
+                  <Text style={styles.clearBtnText}>Effacer</Text>
                 </TouchableOpacity>
-              ))}
+              )}
             </View>
 
-            {/* Chip selector */}
+            {/* Jetons empilés de mise */}
+            <View style={styles.placedChipsRow}>
+              {betChips.length === 0 ? (
+                <Text style={styles.noChipsText}>Sélectionnez des jetons</Text>
+              ) : (
+                betChips.map((val, i) => (
+                  <TouchableOpacity key={i} style={styles.placedChip} onPress={() => handleRemoveChip(i)}>
+                    <Text style={styles.placedChipText}>{val}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Barres de jetons 1, 2, 5, 10, 20 */}
             <View style={styles.chipsRow}>
               {[1, 2, 5, 10, 20].map((val) => (
                 <TouchableOpacity key={val} style={styles.chipBtn} onPress={() => handleAddChip(val)}>
@@ -236,9 +253,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#10b981',
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
   },
   bigPlayBtnText: {
     color: '#020617',
@@ -272,7 +286,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#064e3b',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justify.content: 'space-around',
     padding: 20,
   },
   feltLabel: {
@@ -320,17 +334,33 @@ const styles = StyleSheet.create({
     borderTopColor: '#1e293b',
     alignItems: 'center',
   },
+  betTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 10,
+  },
   betTitle: {
     color: '#f59e0b',
     fontWeight: '800',
     fontSize: 13,
-    marginBottom: 10,
+  },
+  clearBtnText: {
+    color: '#f43f5e',
+    fontWeight: '700',
+    fontSize: 12,
   },
   placedChipsRow: {
     flexDirection: 'row',
     gap: 8,
     minHeight: 40,
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  noChipsText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   placedChip: {
     width: 36,
@@ -381,3 +411,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+registerRootComponent(App);
