@@ -1,6 +1,6 @@
 import './polyfill';
 import { registerRootComponent } from 'expo';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -23,7 +23,6 @@ import {
   Settings,
   HelpCircle,
   ChevronRight,
-  Coins,
   LogOut,
   LifeBuoy,
   Layers,
@@ -65,11 +64,11 @@ function CasinoChip({ value, onPress }) {
 function AnimatedPlayingCard({ card, compact = false }) {
   const flipAnim = useRef(new Animated.Value(card.faceUp ? 1 : 0)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
     Animated.timing(flipAnim, {
       toValue: card.faceUp ? 1 : 0,
-      duration: 350,
-      easing: Easing.out(Easing.ease),
+      duration: 380,
+      easing: Easing.out(Easing.back(1.1)),
       useNativeDriver: true,
     }).start();
   }, [card.faceUp]);
@@ -89,7 +88,7 @@ function AnimatedPlayingCard({ card, compact = false }) {
 
   return (
     <View style={compact ? styles.cardWrapperCompact : styles.cardWrapper}>
-      {/* FACE ARRIÈRE (DOS DE CARTE RED) */}
+      {/* DOS DE CARTE */}
       <Animated.View
         style={[
           backStyle,
@@ -102,7 +101,7 @@ function AnimatedPlayingCard({ card, compact = false }) {
         </View>
       </Animated.View>
 
-      {/* FACE AVANT (VALEUR ET ENSEIGNE) */}
+      {/* FACE DE CARTE */}
       <Animated.View
         style={[
           cardStyle,
@@ -141,6 +140,10 @@ function App() {
   // Solde history tracking for progression chart
   const [balanceHistory, setBalanceHistory] = useState([100, 110, 100, 120, 110, 130, 125, 140, 100]);
 
+  // Page Transition Animations
+  const tabFadeAnim = useRef(new Animated.Value(1)).current;
+  const subSectionAnim = useRef(new Animated.Value(1)).current;
+
   // Leave confirmation modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
@@ -152,6 +155,40 @@ function App() {
     { id: 4, type: 'BLACKJACK', bet: 10, payout: +25, score: '21 BJ vs 18', date: 'Hier 23:12' },
     { id: 5, type: 'LOSS', bet: 5, payout: -5, score: 'BUST (23)', date: 'Hier 22:50' },
   ]);
+
+  // Handle Tab Change with Fade Animation
+  const changeTab = (newTab) => {
+    if (newTab === activeTab) return;
+    Animated.timing(tabFadeAnim, {
+      toValue: 0,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveTab(newTab);
+      setProfileSubSection(null);
+      Animated.timing(tabFadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
+  // Handle Sub-Section Change with Slide/Fade Animation
+  const changeSubSection = (section) => {
+    Animated.timing(subSectionAnim, {
+      toValue: 0,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      setProfileSubSection(section);
+      Animated.timing(subSectionAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   // Helper card generator
   const getRandomCard = (faceUp = true) => {
@@ -224,12 +261,10 @@ function App() {
     setHasInsurance(false);
     setBetChips([]);
     setCurrentBet(10);
-    setActiveTab('HOME');
+    changeTab('HOME');
   };
 
-  // ==============================================================
-  // GAME ENGINE - SEQUENTIAL DEALING (PLAYER 1 -> DEALER 1 -> PLAYER 2 -> DEALER 2 FACE DOWN)
-  // ==============================================================
+  // Game Engine - Start Game
   const handleStartGame = () => {
     if (currentBet <= 0 || currentBet > credits || isDealing) return;
     
@@ -241,9 +276,8 @@ function App() {
     const p1 = getRandomCard(true);
     const d1 = getRandomCard(true);
     const p2 = getRandomCard(true);
-    const d2 = getRandomCard(false); // face down
+    const d2 = getRandomCard(false);
 
-    // 1. Deal 1st card to player
     setGame({
       playerHand: [p1],
       dealerHand: [],
@@ -257,7 +291,6 @@ function App() {
       activeSplitIndex: 0,
     });
 
-    // 2. Deal 1st card to dealer after 350ms
     setTimeout(() => {
       setGame(prev => ({
         ...prev,
@@ -265,7 +298,6 @@ function App() {
         dealerScore: calcScore([d1]),
       }));
 
-      // 3. Deal 2nd card to player after 350ms
       setTimeout(() => {
         setGame(prev => ({
           ...prev,
@@ -273,7 +305,6 @@ function App() {
           playerScore: calcScore([p1, p2]),
         }));
 
-        // 4. Deal 2nd face-down card to dealer after 350ms
         setTimeout(() => {
           setGame(prev => ({
             ...prev,
@@ -288,7 +319,7 @@ function App() {
     }, 350);
   };
 
-  // Take Insurance (Assurance)
+  // Take Insurance
   const handleTakeInsurance = () => {
     if (!game || game.status !== 'PLAYING' || hasInsurance || credits < game.bet / 2) return;
     const insuranceCost = Math.floor(game.bet / 2);
@@ -434,11 +465,10 @@ function App() {
     }
   };
 
-  // Step-by-step Dealer Turn with 3D Flip of 2nd Card
+  // Step-by-step Dealer Turn
   const executeDealerTurnStepByStep = (pHand, pScore, betAmount) => {
     setIsDealing(true);
 
-    // 3D Flip 2nd card to face up
     let updatedDealerHand = game.dealerHand.map(c => ({ ...c, faceUp: true }));
     let dScore = calcScore(updatedDealerHand);
 
@@ -470,7 +500,6 @@ function App() {
           let result = '';
           let winAmount = 0;
           let type = 'LOSS';
-          let payout = -betAmount;
 
           let finalCredits = credits;
 
@@ -478,14 +507,12 @@ function App() {
             result = 'GAGNÉ !';
             type = 'WIN';
             winAmount = betAmount * 2;
-            payout = +betAmount;
             finalCredits += winAmount;
             setCredits(prev => prev + winAmount);
           } else if (pScore === finalDScore) {
             result = 'ÉGALITÉ !';
             type = 'PUSH';
             winAmount = betAmount;
-            payout = 0;
             finalCredits += winAmount;
             setCredits(prev => prev + winAmount);
           } else {
@@ -493,9 +520,8 @@ function App() {
             type = 'LOSS';
           }
 
-          // Handle Insurance payout if dealer has Blackjack (21 on 2 cards)
           if (hasInsurance && currentHand.length === 2 && finalDScore === 21) {
-            const insurancePayout = game.bet; // Insurance pays 2:1 on 0.5x bet = 1x bet
+            const insurancePayout = game.bet;
             setCredits(prev => prev + insurancePayout);
             finalCredits += insurancePayout;
             result += ' (ASSURANCE PAYÉE !)';
@@ -503,7 +529,7 @@ function App() {
 
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult(result);
-          setHistory(prev => [{ id: Date.now(), type, bet: betAmount, payout, score: `${pScore} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
+          setHistory(prev => [{ id: Date.now(), type, bet: betAmount, payout: type === 'WIN' ? +betAmount : type === 'PUSH' ? 0 : -betAmount, score: `${pScore} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
           setBalanceHistory(prev => [...prev, finalCredits]);
           setIsDealing(false);
         }, 400);
@@ -594,7 +620,7 @@ function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
-      {/* HEADER DISCRET (BOUTON QUITTER SI EN JEU) */}
+      {/* HEADER DISCRET SANS BADGE DE CRÉDIT */}
       <View style={styles.header}>
         {activeTab === 'GAME' ? (
           <TouchableOpacity style={styles.leaveHeaderBtn} onPress={() => setShowLeaveModal(true)}>
@@ -604,15 +630,10 @@ function App() {
         ) : (
           <View style={{ width: 1 }} />
         )}
-
-        <View style={styles.bankrollTag}>
-          <Coins size={12} color="#a3a3a3" />
-          <Text style={styles.bankrollText}>{credits} CR</Text>
-        </View>
       </View>
 
-      {/* CONTENU PRINCIPAL */}
-      <View style={styles.mainContent}>
+      {/* CONTENU PRINCIPAL AVEC FONDU D'ONGLET */}
+      <Animated.View style={[styles.mainContent, { opacity: tabFadeAnim }]}>
 
         {/* TAB 1: ACCUEIL */}
         {activeTab === 'HOME' && (
@@ -627,7 +648,7 @@ function App() {
                   <Text style={styles.failsafeBtnText}>OBTENIR 100 CR GRATUITS</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity style={styles.heroPlayBtn} onPress={() => setActiveTab('GAME')}>
+                <TouchableOpacity style={styles.heroPlayBtn} onPress={() => changeTab('GAME')}>
                   <Play size={20} color="#ffffff" fill="#ffffff" />
                   <Text style={styles.heroPlayBtnText}>JOUER UNE MANCHE</Text>
                 </TouchableOpacity>
@@ -664,20 +685,19 @@ function App() {
           </ScrollView>
         )}
 
-        {/* TAB 2: TABLE DE JEU - DESIGN NOIR OFFSUIT AVEC PIOCHE DE LA TAILLE DES CARTES */}
+        {/* TAB 2: TABLE DE JEU (SANS TEXTE "PLACEZ VOS JETONS" NI "ATTENTE DE MANCHE") */}
         {activeTab === 'GAME' && (
           <View style={styles.gameContainer}>
             <View style={styles.tableFrame}>
               <View style={styles.tableInnerFelt}>
 
-                {/* PIOCHE DE CARTE: MÊME TAILLE QUE LES CARTES DU JEU (58x84) ET SOUS LE DÉCOMPTE */}
+                {/* PIOCHE DE CARTE: FORMAT 58x84 SOUS LE DÉCOMPTE */}
                 <View style={styles.shoeFullContainer}>
                   <View style={styles.shoeCountBadge}>
                     <Layers size={11} color="#a3a3a3" />
                     <Text style={styles.shoeCountText}>{cardsRemaining} CARTES</Text>
                   </View>
                   
-                  {/* EMPILEMENT DE DOS DE CARTES MÊME FORMAT (58x84) */}
                   <View style={styles.shoeStackWrapper}>
                     <View style={styles.shoeCardBack3} />
                     <View style={styles.shoeCardBack2} />
@@ -711,9 +731,7 @@ function App() {
                         <AnimatedPlayingCard key={card.id || idx} card={card} />
                       ))
                     ) : (
-                      <View style={styles.emptyCardSlot}>
-                        <Text style={styles.emptySlotText}>ATTENTE DE MANCHE</Text>
-                      </View>
+                      <View style={styles.emptyCardSlotClean} />
                     )}
                   </View>
                 </View>
@@ -765,9 +783,7 @@ function App() {
                         ))
                       )
                     ) : (
-                      <View style={styles.emptyCardSlot}>
-                        <Text style={styles.emptySlotText}>PLACEZ VOS JETONS</Text>
-                      </View>
+                      <View style={styles.emptyCardSlotClean} />
                     )}
                   </View>
                 </View>
@@ -780,7 +796,6 @@ function App() {
               {game && game.status === 'PLAYING' ? (
                 <View style={styles.actionRowContainer}>
 
-                  {/* BOUTON ASSURANCE SI CROUPIER MONTRE UN AS */}
                   {canInsurance && (
                     <TouchableOpacity style={styles.insuranceBtn} onPress={handleTakeInsurance}>
                       <ShieldAlert size={14} color="#ffffff" />
@@ -814,7 +829,6 @@ function App() {
 
                 </View>
               ) : game && game.status === 'FINISHED' ? (
-                /* REJOUER / NETTOYER LES CARTES */
                 <TouchableOpacity style={styles.dealBtn} onPress={handleResetRound} disabled={isDealing}>
                   <Text style={styles.dealBtnText}>NOUVELLE MANCHE</Text>
                 </TouchableOpacity>
@@ -868,14 +882,14 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL - AVEC GRAPHIQUE DE SOLDE ET STATS AVANCÉES */}
+        {/* TAB 3: PROFIL AVEC TRANSITION ANIME DE SOUS-SECTION */}
         {activeTab === 'PROFILE' && (
           <ScrollView contentContainerStyle={styles.profileScroll}>
             {profileSubSection ? (
-              <View style={styles.subSectionContainer}>
+              <Animated.View style={[styles.subSectionContainer, { opacity: subSectionAnim }]}>
                 <TouchableOpacity 
                   style={styles.backToProfileBtn} 
-                  onPress={() => setProfileSubSection(null)}
+                  onPress={() => changeSubSection(null)}
                 >
                   <Text style={styles.backToProfileText}>← RETOUR PROFIL</Text>
                 </TouchableOpacity>
@@ -884,7 +898,6 @@ function App() {
                   <View style={styles.subCard}>
                     <Text style={styles.subTitle}>STATISTIQUES AVANCÉES & PROGRESSION</Text>
 
-                    {/* GRAPHIQUE VISUEL DE PROGRESSION DU SOLDE */}
                     <View style={styles.chartContainer}>
                       <Text style={styles.chartTitle}>PROGRESSION DU SOLDE (RÉCENT)</Text>
                       <View style={styles.chartBarsRow}>
@@ -939,9 +952,9 @@ function App() {
                     <Text style={styles.subText}>• Assurance : Protégez-vous si le Croupier montre un As.</Text>
                   </View>
                 )}
-              </View>
+              </Animated.View>
             ) : (
-              <View style={styles.profileMenuContainer}>
+              <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
                 <View style={styles.profileHeaderCard}>
                   <View style={styles.avatarCircle}>
                     <User size={28} color="#ffffff" />
@@ -958,7 +971,7 @@ function App() {
                 )}
 
                 <View style={styles.menuOptionsGroup}>
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('STATS')}>
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('STATS')}>
                     <View style={styles.optionLeft}>
                       <BarChart2 size={18} color="#a3a3a3" />
                       <Text style={styles.optionLabel}>Statistiques avancées & Graphique</Text>
@@ -966,7 +979,7 @@ function App() {
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('ACHIEVEMENTS')}>
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('ACHIEVEMENTS')}>
                     <View style={styles.optionLeft}>
                       <Award size={18} color="#a3a3a3" />
                       <Text style={styles.optionLabel}>Succès & Trophées</Text>
@@ -974,7 +987,7 @@ function App() {
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('LEARN')}>
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('LEARN')}>
                     <View style={styles.optionLeft}>
                       <HelpCircle size={18} color="#a3a3a3" />
                       <Text style={styles.optionLabel}>Règles & Stratégie</Text>
@@ -982,7 +995,7 @@ function App() {
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('SETTINGS')}>
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('SETTINGS')}>
                     <View style={styles.optionLeft}>
                       <Settings size={18} color="#a3a3a3" />
                       <Text style={styles.optionLabel}>Paramètres</Text>
@@ -990,12 +1003,12 @@ function App() {
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Animated.View>
             )}
           </ScrollView>
         )}
 
-      </View>
+      </Animated.View>
 
       {/* BARRE EN BAS (MASQUÉE PENDANT LE JEU) */}
       {activeTab !== 'GAME' && (
@@ -1007,7 +1020,7 @@ function App() {
 
           <TouchableOpacity 
             style={[styles.tabItem, activeTab === 'HOME' && styles.tabItemActive]} 
-            onPress={() => { setActiveTab('HOME'); setProfileSubSection(null); }}
+            onPress={() => changeTab('HOME')}
           >
             <Home size={22} color={activeTab === 'HOME' ? '#ffffff' : '#737373'} />
             <Text style={[activeTab === 'HOME' ? styles.tabLabelActive : styles.tabLabel]}>ACCUEIL</Text>
@@ -1015,7 +1028,7 @@ function App() {
 
           <TouchableOpacity 
             style={[styles.tabItem, activeTab === 'PROFILE' && styles.tabItemActive]} 
-            onPress={() => setActiveTab('PROFILE')}
+            onPress={() => changeTab('PROFILE')}
           >
             <User size={22} color={activeTab === 'PROFILE' ? '#ffffff' : '#737373'} />
             <Text style={[activeTab === 'PROFILE' ? styles.tabLabelActive : styles.tabLabel]}>PROFIL</Text>
@@ -1087,22 +1100,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 10,
     letterSpacing: 1,
-  },
-  bankrollTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#171717',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#262626',
-  },
-  bankrollText: {
-    color: '#e5e5e5',
-    fontWeight: '900',
-    fontSize: 12,
   },
   mainContent: {
     flex: 1,
@@ -1230,7 +1227,7 @@ const styles = StyleSheet.create({
   textRed: { color: '#f87171' },
   textGray: { color: '#a3a3a3' },
 
-  /* GAME STYLES - OFFSUIT TABLE SOMBRE */
+  /* GAME STYLES */
   gameContainer: {
     flex: 1,
   },
@@ -1255,7 +1252,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   
-  /* PIOCHE 3D FORMAT CARTES DU JEU (58x84) DIRECTEMENT SOUS LE DÉCOMPTE */
+  /* PIOCHE 3D FORMAT 58x84 SOUS LE DÉCOMPTE */
   shoeFullContainer: {
     position: 'absolute',
     top: 10,
@@ -1442,21 +1439,14 @@ const styles = StyleSheet.create({
   cardRankBlackSmall: { color: '#171717', fontWeight: '900', fontSize: 14 },
   cardSuitBlackSmall: { color: '#171717', fontSize: 12 },
 
-  emptyCardSlot: {
+  /* CAGE DE CARTE ÉPURÉE SANS TEXTE DU TOUT */
+  emptyCardSlotClean: {
     width: 120,
     height: 84,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#262626',
     borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptySlotText: {
-    color: '#404040',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
   },
 
   /* SPLIT MAINS */
@@ -1676,7 +1666,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* PROFILE STYLES - GRAPHIQUE ET STATS AVANCÉES */
+  /* PROFILE STYLES */
   profileScroll: {
     padding: 16,
   },
