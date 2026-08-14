@@ -30,7 +30,8 @@ import {
   Repeat,
   Maximize2,
   ShieldAlert,
-  BarChart2
+  BarChart2,
+  Coins
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -60,63 +61,65 @@ function CasinoChip({ value, onPress }) {
   );
 }
 
-// 3D Animated Card Component (Card Flip 180° rotateY)
-function AnimatedPlayingCard({ card, compact = false }) {
-  const flipAnim = useRef(new Animated.Value(card.faceUp ? 1 : 0)).current;
+// Smooth Animated Card Component (Card Slide & Deal Animation)
+function AnimatedPlayingCard({ card, compact = false, index = 0 }) {
+  const dealAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(flipAnim, {
-      toValue: card.faceUp ? 1 : 0,
-      duration: 380,
+    dealAnim.setValue(0);
+    Animated.timing(dealAnim, {
+      toValue: 1,
+      duration: 280,
       easing: Easing.out(Easing.back(1.1)),
       useNativeDriver: true,
     }).start();
-  }, [card.faceUp]);
+  }, [card.id]);
 
-  const frontInterpolate = flipAnim.interpolate({
+  const translateY = dealAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['180deg', '0deg'],
+    outputRange: [-30, 0],
   });
 
-  const backInterpolate = flipAnim.interpolate({
+  const scale = dealAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
+    outputRange: [0.85, 1],
   });
 
   const cardStyle = compact ? styles.cardFrontCompact : styles.cardFront;
   const backStyle = compact ? styles.cardBackCompact : styles.cardBack;
+  const wrapperStyle = compact ? styles.cardWrapperCompact : styles.cardWrapper;
+  
+  // Overlap cards horizontally so they never overflow screen width
+  const overlapMargin = index > 0 ? (compact ? -20 : -26) : 0;
 
   return (
-    <View style={compact ? styles.cardWrapperCompact : styles.cardWrapper}>
-      {/* DOS DE CARTE */}
-      <Animated.View
-        style={[
-          backStyle,
-          styles.cardAnimatedSide,
-          { transform: [{ rotateY: backInterpolate }] },
-        ]}
-      >
-        <View style={styles.cardBackInner}>
-          <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>♠</Text>
+    <Animated.View
+      style={[
+        wrapperStyle,
+        {
+          marginLeft: overlapMargin,
+          opacity: dealAnim,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}
+    >
+      {card.faceUp ? (
+        <View style={cardStyle}>
+          <Text style={card.isRed ? (compact ? styles.cardRankRedSmall : styles.cardRankRed) : (compact ? styles.cardRankBlackSmall : styles.cardRankBlack)}>
+            {card.rank}
+          </Text>
+          <Text style={card.isRed ? (compact ? styles.cardSuitRedSmall : styles.cardSuitRed) : (compact ? styles.cardSuitBlackSmall : styles.cardSuitBlack)}>
+            {card.suit}
+          </Text>
         </View>
-      </Animated.View>
-
-      {/* FACE DE CARTE */}
-      <Animated.View
-        style={[
-          cardStyle,
-          styles.cardAnimatedSide,
-          { transform: [{ rotateY: frontInterpolate }] },
-        ]}
-      >
-        <Text style={card.isRed ? (compact ? styles.cardRankRedSmall : styles.cardRankRed) : (compact ? styles.cardRankBlackSmall : styles.cardRankBlack)}>
-          {card.rank}
-        </Text>
-        <Text style={card.isRed ? (compact ? styles.cardSuitRedSmall : styles.cardSuitRed) : (compact ? styles.cardSuitBlackSmall : styles.cardSuitBlack)}>
-          {card.suit}
-        </Text>
-      </Animated.View>
-    </View>
+      ) : (
+        <View style={backStyle}>
+          <View style={styles.cardBackInner}>
+            <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>♠</Text>
+          </View>
+        </View>
+      )}
+    </Animated.View>
   );
 }
 
@@ -174,7 +177,7 @@ function App() {
     });
   };
 
-  // Handle Sub-Section Change with Slide/Fade Animation
+  // Handle Sub-Section Change with Animation
   const changeSubSection = (section) => {
     Animated.timing(subSectionAnim, {
       toValue: 0,
@@ -620,19 +623,22 @@ function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
-      {/* HEADER DISCRET SANS BADGE DE CRÉDIT */}
-      <View style={styles.header}>
-        {activeTab === 'GAME' ? (
+      {/* HEADER DE TABLE SEULEMENT EN JEU (AVEC BOUTON QUITTER ET SOLDE) */}
+      {activeTab === 'GAME' && (
+        <View style={styles.header}>
           <TouchableOpacity style={styles.leaveHeaderBtn} onPress={() => setShowLeaveModal(true)}>
             <LogOut size={16} color="#f43f5e" />
             <Text style={styles.leaveHeaderBtnText}>QUITTER LA TABLE</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 1 }} />
-        )}
-      </View>
 
-      {/* CONTENU PRINCIPAL AVEC FONDU D'ONGLET */}
+          <View style={styles.bankrollTag}>
+            <Coins size={12} color="#a3a3a3" />
+            <Text style={styles.bankrollText}>{credits} CR</Text>
+          </View>
+        </View>
+      )}
+
+      {/* CONTENU PRINCIPAL AVEC TRANSITION */}
       <Animated.View style={[styles.mainContent, { opacity: tabFadeAnim }]}>
 
         {/* TAB 1: ACCUEIL */}
@@ -685,7 +691,7 @@ function App() {
           </ScrollView>
         )}
 
-        {/* TAB 2: TABLE DE JEU (SANS TEXTE "PLACEZ VOS JETONS" NI "ATTENTE DE MANCHE") */}
+        {/* TAB 2: TABLE DE JEU */}
         {activeTab === 'GAME' && (
           <View style={styles.gameContainer}>
             <View style={styles.tableFrame}>
@@ -728,7 +734,7 @@ function App() {
                   <View style={styles.cardsRow}>
                     {game && game.dealerHand.length > 0 ? (
                       game.dealerHand.map((card, idx) => (
-                        <AnimatedPlayingCard key={card.id || idx} card={card} />
+                        <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} />
                       ))
                     ) : (
                       <View style={styles.emptyCardSlotClean} />
@@ -771,7 +777,7 @@ function App() {
                               </View>
                               <View style={styles.cardsRowCompact}>
                                 {hand.map((card, cIdx) => (
-                                  <AnimatedPlayingCard key={card.id || cIdx} card={card} compact={true} />
+                                  <AnimatedPlayingCard key={card.id || cIdx} card={card} compact={true} index={cIdx} />
                                 ))}
                               </View>
                             </View>
@@ -779,7 +785,7 @@ function App() {
                         </View>
                       ) : (
                         game.playerHand.map((card, idx) => (
-                          <AnimatedPlayingCard key={card.id || idx} card={card} />
+                          <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} />
                         ))
                       )
                     ) : (
@@ -882,7 +888,7 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL AVEC TRANSITION ANIME DE SOUS-SECTION */}
+        {/* TAB 3: PROFIL */}
         {activeTab === 'PROFILE' && (
           <ScrollView contentContainerStyle={styles.profileScroll}>
             {profileSubSection ? (
@@ -927,7 +933,6 @@ function App() {
                     <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
                     <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
                     <Text style={styles.subText}>• Effets sonores : Activé</Text>
-                    <Text style={styles.subText}>• Animations 3D : Activées (180° RotateY)</Text>
                     <Text style={styles.subText}>• Thème : Sombre Épuré</Text>
                   </View>
                 )}
@@ -1100,6 +1105,22 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 10,
     letterSpacing: 1,
+  },
+  bankrollTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#171717',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  bankrollText: {
+    color: '#e5e5e5',
+    fontWeight: '900',
+    fontSize: 12,
   },
   mainContent: {
     flex: 1,
@@ -1357,10 +1378,10 @@ const styles = StyleSheet.create({
   },
   cardsRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
   },
 
-  /* 3D FLIP CARD STYLES */
+  /* CARD WRAPPER & STYLES (OVERLAPPING CARDS) */
   cardWrapper: {
     width: 58,
     height: 84,
@@ -1368,12 +1389,6 @@ const styles = StyleSheet.create({
   cardWrapperCompact: {
     width: 44,
     height: 64,
-  },
-  cardAnimatedSide: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    backfaceVisibility: 'hidden',
   },
   cardFront: {
     width: 58,
@@ -1481,7 +1496,7 @@ const styles = StyleSheet.create({
   },
   cardsRowCompact: {
     flexDirection: 'row',
-    gap: 4,
+    alignItems: 'center',
   },
 
   resultBanner: {
