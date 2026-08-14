@@ -1327,13 +1327,11 @@ function App() {
         </View>
       )}
 
-      {/* HEADER GEMS FIXE EN HAUT À GAUCHE (BOUTIQUE, ACCUEIL, PROFIL) — FOND NOIR PUR OLED */}
+      {/* GEMS EN HAUT À GAUCHE — ICÔNE VERTE + CHIFFRE VERT, PAS DE LABEL */}
       {activeTab !== 'GAME' && profileSubSection === null && (
         <View style={styles.topLeftGemsBar}>
-          <View style={styles.gemsTagBox}>
-            <Gem size={15} color="#06b6d4" fill="#0891b2" />
-            <Text style={styles.gemsTagText}>{gems} GEMS</Text>
-          </View>
+          <Gem size={16} color="#22c55e" fill="#16a34a" />
+          <Text style={styles.gemsTagText}>{gems}</Text>
         </View>
       )}
 
@@ -1344,59 +1342,54 @@ function App() {
           {...swipeTabPanResponder.panHandlers}
         >
 
-          {/* TAB 1: BOUTIQUE (ACHAT DE COFFRES 50, 100, 150 GEMS) */}
+          {/* TAB 1: BOUTIQUE */}
           {activeTab === 'SHOP' && (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.shopScroll}>
-              <View style={styles.shopHeaderBox}>
-                <Text style={styles.shopTitle}>BOUTIQUE ROYALE</Text>
-                <Text style={styles.shopSubTitle}>Ouvrez des coffres mystères avec vos Gems</Text>
-              </View>
 
-              {/* BOUTON TEST POUR OBTENIR +50 GEMS */}
+              <Text style={styles.sectionTitle}>BOUTIQUE</Text>
+
+              {/* RECHARGE GEMS */}
               <TouchableOpacity 
-                style={styles.claimGemsBtn} 
+                style={styles.shopRechargeRow} 
                 onPress={() => {
                   triggerHaptic(20);
                   setGems(prev => prev + 50);
                 }}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
-                <Sparkles size={16} color="#06b6d4" />
-                <Text style={styles.claimGemsBtnText}>OBTENIR +50 GEMS (RECHARGE)</Text>
+                <View style={styles.shopRechargeLeft}>
+                  <Gem size={16} color="#22c55e" fill="#16a34a" />
+                  <View>
+                    <Text style={styles.shopRechargeTitle}>Recharge quotidienne</Text>
+                    <Text style={styles.shopRechargeDesc}>Obtenir +50 Gems gratuitement</Text>
+                  </View>
+                </View>
+                <ChevronRight size={16} color="#525252" />
               </TouchableOpacity>
 
-              {/* GRILLE DES 3 COFFRES (50, 100, 150 GEMS) */}
-              <View style={styles.chestsGrid}>
-                {CHESTS.map((chest) => (
-                  <View 
-                    key={chest.id} 
-                    style={[
-                      styles.chestCard, 
-                      { borderColor: chest.borderColor, backgroundColor: chest.bgGlow }
-                    ]}
-                  >
-                    <View style={styles.chestBadgeTop}>
-                      <Text style={[styles.chestBadgeText, { color: chest.color }]}>{chest.badgeText}</Text>
+              {/* COFFRES */}
+              <Text style={styles.shopSectionLabel}>COFFRES</Text>
+              {CHESTS.map((chest) => (
+                <TouchableOpacity
+                  key={chest.id}
+                  style={styles.chestRow}
+                  onPress={() => handleBuyChest(chest)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.chestRowLeft}>
+                    <Package size={20} color="#a3a3a3" />
+                    <View>
+                      <Text style={styles.chestRowName}>{chest.name}</Text>
+                      <Text style={styles.chestRowDesc}>{chest.desc}</Text>
                     </View>
-
-                    <View style={styles.chestIconWrapper}>
-                      <Package size={42} color={chest.color} />
-                    </View>
-
-                    <Text style={styles.chestName}>{chest.name}</Text>
-                    <Text style={styles.chestDesc}>{chest.desc}</Text>
-
-                    <TouchableOpacity 
-                      style={[styles.buyChestBtn, { backgroundColor: chest.borderColor }]}
-                      onPress={() => handleBuyChest(chest)}
-                      activeOpacity={0.8}
-                    >
-                      <Gem size={14} color="#ffffff" fill="#ffffff" />
-                      <Text style={styles.buyChestBtnText}>OUVRIR ({chest.cost} GEMS)</Text>
-                    </TouchableOpacity>
                   </View>
-                ))}
-              </View>
+                  <View style={styles.chestRowPrice}>
+                    <Gem size={12} color="#22c55e" fill="#16a34a" />
+                    <Text style={styles.chestRowPriceText}>{chest.cost}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+
             </ScrollView>
           )}
 
@@ -1975,127 +1968,99 @@ const styles = StyleSheet.create({
   // TOP-LEFT GEMS BAR (POUR BOUTIQUE, ACCUEIL, PROFIL) — FOND NOIR PUR OLED, PAS DE CELLULE GRISE
   topLeftGemsBar: {
     position: 'absolute',
-    top: 14,
-    left: 16,
+    top: 52,
+    left: 18,
     zIndex: 999,
-  },
-  gemsTagBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#000000',
-    borderColor: '#262626',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: 5,
   },
   gemsTagText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: '#22c55e',
+    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: 0.5,
   },
 
   // SHOP STYLES
   shopScroll: {
     paddingHorizontal: 16,
-    paddingTop: 54,
+    paddingTop: 20,
     paddingBottom: 110,
-    gap: 16,
+    gap: 6,
   },
-  shopHeaderBox: {
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  shopTitle: {
-    color: '#06b6d4',
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  shopSubTitle: {
-    color: '#737373',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  claimGemsBtn: {
+  shopRechargeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#081d2c',
-    borderColor: '#0284c7',
+    justifyContent: 'space-between',
+    backgroundColor: '#0d0d0d',
+    borderColor: '#1c1c1c',
     borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-  },
-  claimGemsBtnText: {
-    color: '#38bdf8',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  chestsGrid: {
-    gap: 16,
-    marginTop: 6,
-  },
-  chestCard: {
-    borderWidth: 1.5,
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  chestBadgeTop: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    backgroundColor: '#000000',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#262626',
-  },
-  chestBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  chestIconWrapper: {
-    marginVertical: 10,
-  },
-  chestName: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  chestDesc: {
-    color: '#a3a3a3',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  buyChestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    paddingVertical: 12,
     borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 6,
   },
-  buyChestBtnText: {
+  shopRechargeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shopRechargeTitle: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  shopRechargeDesc: {
+    color: '#525252',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  shopSectionLabel: {
+    color: '#404040',
+    fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  chestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0d0d0d',
+    borderColor: '#1c1c1c',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 6,
+  },
+  chestRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  chestRowName: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  chestRowDesc: {
+    color: '#525252',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  chestRowPrice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chestRowPriceText: {
+    color: '#22c55e',
+    fontSize: 13,
+    fontWeight: '900',
   },
   header: {
     flexDirection: 'row',
