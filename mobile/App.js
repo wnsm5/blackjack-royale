@@ -359,14 +359,8 @@ function App() {
     { id: 6, title: 'Grand Collectionneur', desc: 'Débloquer 10 Dos de Cartes', completed: false, current: 5, target: 10 },
   ]);
 
-  // Match History state
-  const [history, setHistory] = useState([
-    { id: 1, type: 'WIN', bet: 10, payout: +20, score: '20 vs 18', date: 'Aujourd\'hui 22:04' },
-    { id: 2, type: 'LOSS', bet: 10, payout: -10, score: '17 vs 19', date: 'Aujourd\'hui 21:58' },
-    { id: 3, type: 'WIN', bet: 20, payout: +40, score: '21 vs 20', date: 'Aujourd\'hui 21:45' },
-    { id: 4, type: 'BLACKJACK', bet: 10, payout: +25, score: '21 BJ vs 18', date: 'Hier 23:12' },
-    { id: 5, type: 'LOSS', bet: 5, payout: -5, score: 'BUST (23)', date: 'Hier 22:50' },
-  ]);
+  // Match History state (starts empty)
+  const [history, setHistory] = useState([]);
 
   const activeCardSkin = cardBackSkins.find(s => s.id === equippedCardBackId) || cardBackSkins[0];
 
@@ -1235,34 +1229,42 @@ function App() {
               </View>
 
               <View style={styles.historySection}>
-                <Text style={styles.sectionTitle}>DERNIÈRES PARTIES (10)</Text>
-                {history.slice(0, 10).map((item) => (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.historyRow,
-                      item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin
-                        : item.type === 'PUSH' ? styles.historyRowPush
-                        : styles.historyRowLoss
-                    ]}
-                  >
-                    <View style={styles.historyLeft}>
-                      <Text style={[styles.historyTypeBadge,
-                        item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen
-                          : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
-                        {item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU'}
-                      </Text>
-                      <Text style={styles.historyScoreText}>{item.score}</Text>
-                    </View>
-                    <View style={styles.historyRight}>
-                      <Text style={[styles.historyAmountText,
-                        item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
-                        {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
-                      </Text>
-                      <Text style={styles.historyDateText}>{item.date}</Text>
-                    </View>
+                <Text style={styles.sectionTitle}>
+                  DERNIÈRES PARTIES {history.length > 0 ? `(${Math.min(history.length, 10)})` : ''}
+                </Text>
+                {history.length === 0 ? (
+                  <View style={styles.emptyHistoryBox}>
+                    <Text style={styles.emptyHistoryText}>Aucune partie jouée pour le moment</Text>
                   </View>
-                ))}
+                ) : (
+                  history.slice(0, 10).map((item) => (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.historyRow,
+                        item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin
+                          : item.type === 'PUSH' ? styles.historyRowPush
+                          : styles.historyRowLoss
+                      ]}
+                    >
+                      <View style={styles.historyLeft}>
+                        <Text style={[styles.historyTypeBadge,
+                          item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen
+                            : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
+                          {item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU'}
+                        </Text>
+                        <Text style={styles.historyScoreText}>{item.score}</Text>
+                      </View>
+                      <View style={styles.historyRight}>
+                        <Text style={[styles.historyAmountText,
+                          item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
+                          {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
+                        </Text>
+                        <Text style={styles.historyDateText}>{item.date}</Text>
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
             </ScrollView>
           )}
@@ -1778,6 +1780,22 @@ const styles = StyleSheet.create({
   },
   historySection: {
     gap: 10,
+  },
+  emptyHistoryBox: {
+    backgroundColor: '#080808',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
+    borderStyle: 'dashed',
+  },
+  emptyHistoryText: {
+    color: '#525252',
+    fontSize: 13,
+    fontWeight: '600',
   },
   sectionTitle: {
     color: '#737373',
