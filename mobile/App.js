@@ -14,6 +14,7 @@ import {
   Easing,
   PanResponder,
   TextInput,
+  Vibration,
 } from 'react-native';
 import {
   ShoppingBag,
@@ -44,7 +45,8 @@ import {
   Activity,
   Target,
   RotateCcw,
-  Edit3
+  Edit3,
+  Smartphone
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -275,13 +277,24 @@ function App() {
   const [username, setUsername] = useState(() => `user_${Math.floor(1000 + Math.random() * 9000)}`);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  
+  // Vibration / Haptics State
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+
+  const triggerHaptic = (pattern = 15) => {
+    if (hapticsEnabled) {
+      try {
+        Vibration.vibrate(pattern);
+      } catch (e) {}
+    }
+  };
 
   const handleSaveUsername = () => {
     const trimmed = nameInput.trim();
-    if (trimmed.length >= 2) {
+    if (trimmed.length > 0) {
       setUsername(trimmed);
-      setShowEditNameModal(false);
     }
+    setShowEditNameModal(false);
   };
 
   // Shoe / Pioche state (6 decks = 312 cards)
@@ -458,6 +471,7 @@ function App() {
     if (isDealing) return;
     const total = betChips.reduce((a, c) => a + c, 0);
     if (total + val <= credits) {
+      triggerHaptic(12);
       const newChips = [...betChips, val];
       setBetChips(newChips);
       setCurrentBet(total + val);
@@ -468,6 +482,7 @@ function App() {
     if (isDealing) return;
     const idx = betChips.indexOf(valToRemove);
     if (idx !== -1) {
+      triggerHaptic(12);
       const newChips = betChips.filter((_, i) => i !== idx);
       setBetChips(newChips);
       setCurrentBet(newChips.reduce((a, c) => a + c, 0));
@@ -476,6 +491,7 @@ function App() {
 
   const handleClearChips = () => {
     if (isDealing) return;
+    triggerHaptic(15);
     setBetChips([]);
     setCurrentBet(0);
   };
@@ -483,6 +499,7 @@ function App() {
   // MISE MAX
   const handleMaxBet = () => {
     if (isDealing || credits <= 0) return;
+    triggerHaptic(18);
     setCurrentBet(credits);
     setBetChips([credits]);
   };
@@ -527,6 +544,7 @@ function App() {
   // Game Engine - Start Game
   const handleStartGame = () => {
     if (currentBet <= 0 || currentBet > credits || isDealing) return;
+    triggerHaptic(25);
     
     setIsDealing(true);
     setGameResult(null);
@@ -621,6 +639,7 @@ function App() {
   // Take Insurance
   const handleTakeInsurance = () => {
     if (!game || game.status !== 'PLAYING' || hasInsurance || credits < game.bet / 2) return;
+    triggerHaptic(20);
     const insuranceCost = Math.floor(game.bet / 2);
     setCredits(prev => prev - insuranceCost);
     setHasInsurance(true);
@@ -629,6 +648,7 @@ function App() {
   // Hit Action
   const handleHit = () => {
     if (!game || game.status !== 'PLAYING' || isDealing) return;
+    triggerHaptic(18);
 
     setDecisionStats(prev => ({ ...prev, hits: prev.hits + 1 }));
     setIsDealing(true);
@@ -688,6 +708,7 @@ function App() {
   // Double Down Action
   const handleDouble = () => {
     if (!game || game.status !== 'PLAYING' || credits < game.bet || game.playerHand.length !== 2 || isDealing) return;
+    triggerHaptic(25);
 
     setDecisionStats(prev => ({ ...prev, doubles: prev.doubles + 1 }));
     setIsDealing(true);
@@ -726,6 +747,7 @@ function App() {
   const handleSplit = () => {
     if (!game || game.status !== 'PLAYING' || credits < game.bet || game.playerHand.length !== 2 || isDealing) return;
     if (game.playerHand[0].val !== game.playerHand[1].val) return;
+    triggerHaptic(25);
 
     setDecisionStats(prev => ({ ...prev, splits: prev.splits + 1 }));
     setIsDealing(true);
@@ -757,6 +779,7 @@ function App() {
   // Stand Action
   const handleStand = () => {
     if (!game || game.status !== 'PLAYING' || isDealing) return;
+    triggerHaptic(18);
 
     setDecisionStats(prev => ({ ...prev, stands: prev.stands + 1 }));
     if (game.isSplit) {
@@ -1564,7 +1587,23 @@ function App() {
                         </TouchableOpacity>
                       </View>
 
-                      <Text style={styles.subText}>• Effets sonores : Activé</Text>
+                      <View style={styles.settingRowItem}>
+                        <Text style={styles.subText}>• Vibrations : <Text style={{ color: hapticsEnabled ? '#16a34a' : '#ef4444', fontWeight: 'bold' }}>{hapticsEnabled ? 'Activées' : 'Désactivées'}</Text></Text>
+                        <TouchableOpacity 
+                          style={[styles.toggleBtn, hapticsEnabled ? styles.toggleBtnActive : styles.toggleBtnInactive]} 
+                          onPress={() => {
+                            const next = !hapticsEnabled;
+                            setHapticsEnabled(next);
+                            if (next) try { Vibration.vibrate(20); } catch(e){}
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Smartphone size={12} color={hapticsEnabled ? '#ffffff' : '#a3a3a3'} />
+                          <Text style={styles.toggleBtnText}>{hapticsEnabled ? 'OUI' : 'NON'}</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.subText}>• Effets sonores : Activés</Text>
                       <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit OLED</Text>
                       <Text style={styles.subText}>• Version App : 2.6.0 Standalone Native</Text>
 
@@ -1861,7 +1900,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginVertical: 4,
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#15803d',
+    borderColor: '#22c55e',
+  },
+  toggleBtnInactive: {
+    backgroundColor: '#1c1c1c',
+    borderColor: '#333333',
+  },
+  toggleBtnText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   editNameSmallBtn: {
     flexDirection: 'row',
