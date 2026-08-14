@@ -1,5 +1,5 @@
-// EARLY POLYFILL IMPORT - Loaded before any React Native runtime module initialization
-function applyDOMRectPolyfill() {
+// EARLY POLYFILL SCRIPT - Loaded by Metro before CommonJS runtime / module.exports is setup
+(function () {
   function DOMRectPolyfill(x, y, w, h) {
     this.x = Number(x) || 0;
     this.y = Number(y) || 0;
@@ -17,28 +17,22 @@ function applyDOMRectPolyfill() {
     return { x: this.x, y: this.y, width: this.width, height: this.height, top: this.top, right: this.right, bottom: this.bottom, left: this.left };
   };
 
-  const contexts = [
-    typeof globalThis !== 'undefined' ? globalThis : null,
-    typeof global !== 'undefined' ? global : null,
-    typeof window !== 'undefined' ? window : null,
-  ];
+  var target = typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this;
 
-  contexts.forEach(function (ctx) {
-    if (ctx && typeof ctx.DOMRect === 'undefined') {
-      try {
-        Object.defineProperty(ctx, 'DOMRect', {
-          value: DOMRectPolyfill,
-          writable: true,
-          configurable: true,
-          enumerable: false,
-        });
-      } catch (e) {
-        ctx.DOMRect = DOMRectPolyfill;
-      }
+  if (target && typeof target.DOMRect === 'undefined') {
+    try {
+      Object.defineProperty(target, 'DOMRect', {
+        value: DOMRectPolyfill,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
+    } catch (e) {
+      target.DOMRect = DOMRectPolyfill;
     }
-  });
-}
+  }
 
-applyDOMRectPolyfill();
-
-module.exports = applyDOMRectPolyfill;
+  if (typeof global !== 'undefined' && typeof global.DOMRect === 'undefined') {
+    global.DOMRect = DOMRectPolyfill;
+  }
+})();
