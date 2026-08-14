@@ -1,26 +1,21 @@
-// Polyfill Web APIs for Hermes/React Native JS engine
-if (typeof globalThis.DOMRect === 'undefined') {
-  function DOMRectPolyfill(x, y, width, height) {
-    this.x = Number(x) || 0;
-    this.y = Number(y) || 0;
-    this.width = Number(width) || 0;
-    this.height = Number(height) || 0;
+// Top-level Polyfills for React Native / Hermes
+(function () {
+  function DOMRect(x, y, width, height) {
+    this.x = x || 0;
+    this.y = y || 0;
+    this.width = width || 0;
+    this.height = height || 0;
     this.top = this.y;
     this.left = this.x;
     this.right = this.x + this.width;
     this.bottom = this.y + this.height;
   }
 
-  DOMRectPolyfill.fromRect = function (rect) {
-    return new DOMRectPolyfill(
-      rect && rect.x,
-      rect && rect.y,
-      rect && rect.width,
-      rect && rect.height
-    );
+  DOMRect.fromRect = function (rect) {
+    return new DOMRect(rect && rect.x, rect && rect.y, rect && rect.width, rect && rect.height);
   };
 
-  DOMRectPolyfill.prototype.toJSON = function () {
+  DOMRect.prototype.toJSON = function () {
     return {
       x: this.x,
       y: this.y,
@@ -33,19 +28,15 @@ if (typeof globalThis.DOMRect === 'undefined') {
     };
   };
 
-  Object.defineProperty(globalThis, 'DOMRect', {
-    value: DOMRectPolyfill,
-    writable: true,
-    configurable: true,
-  });
+  var target = typeof globalThis !== 'undefined' ? globalThis : typeof global !== 'undefined' ? global : typeof window !== 'undefined' ? window : this;
 
-  if (typeof global !== 'undefined') {
-    global.DOMRect = DOMRectPolyfill;
+  if (target && !target.DOMRect) {
+    target.DOMRect = DOMRect;
   }
-  if (typeof window !== 'undefined') {
-    window.DOMRect = DOMRectPolyfill;
+  if (typeof global !== 'undefined' && !global.DOMRect) {
+    global.DOMRect = DOMRect;
   }
-}
+})();
 
 import { registerRootComponent } from 'expo';
 import App from './App';
