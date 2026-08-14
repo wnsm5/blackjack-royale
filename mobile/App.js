@@ -12,6 +12,7 @@ import {
   Modal,
   Animated,
   Easing,
+  PanResponder,
 } from 'react-native';
 import {
   ShoppingBag,
@@ -296,6 +297,43 @@ function App() {
   const tabFadeAnim = useRef(new Animated.Value(1)).current;
   const subSectionSlideAnim = useRef(new Animated.Value(250)).current;
 
+  // Tab order for swipe (excluding GAME which is entered via button)
+  const SWIPEABLE_TABS = ['HOME', 'PROFILE'];
+
+  // PanResponder: swipe left/right to switch tabs (only when not in GAME and no sub-section open)
+  const swipeTabPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 18 && Math.abs(gs.dy) < 60 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onPanResponderRelease: (_, gs) => {
+        if (Math.abs(gs.dx) < 40) return;
+        // Will be handled via state captured in handler below
+      },
+    })
+  ).current;
+
+  // PanResponder: swipe right to close profile sub-section
+  const swipeSubSectionPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dx > 18 && Math.abs(gs.dy) < 60 && gs.dx > Math.abs(gs.dy),
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 50) {
+          // closeSubSection will be called via ref
+          closeSubSectionRef.current && closeSubSectionRef.current();
+        }
+      },
+    })
+  ).current;
+
+  // Ref to closeSubSection so PanResponder can call it without stale closure
+  const closeSubSectionRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
+  const profileSubSectionRef = useRef(profileSubSection);
+
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { profileSubSectionRef.current = profileSubSection; }, [profileSubSection]);
+
   // Leave confirmation modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
@@ -329,7 +367,7 @@ function App() {
 
   // Handle Tab Change with Fade Animation
   const changeTab = (newTab) => {
-    if (newTab === activeTab) return;
+    if (newTab === activeTabRef.current) return;
     Animated.timing(tabFadeAnim, {
       toValue: 0,
       duration: 120,
@@ -367,6 +405,23 @@ function App() {
     }).start(() => {
       setProfileSubSection(null);
     });
+  };
+
+  // Keep closeSubSection accessible from PanResponder (avoids stale closure)
+  closeSubSectionRef.current = closeSubSection;
+
+  // Swipe tab handler (reads live refs so PanResponder stays fresh)
+  const handleSwipeTabs = (dx) => {
+    const tab = activeTabRef.current;
+    const sub = profileSubSectionRef.current;
+    if (tab === 'GAME') return; // no swipe during game
+    if (sub !== null) return;   // sub-section open: handled by sub-section responder
+    const idx = SWIPEABLE_TABS.indexOf(tab);
+    if (dx < -50 && idx < SWIPEABLE_TABS.length - 1) {
+      changeTab(SWIPEABLE_TABS[idx + 1]); // swipe left → next tab
+    } else if (dx > 50 && idx > 0) {
+      changeTab(SWIPEABLE_TABS[idx - 1]); // swipe right → previous tab
+    }
   };
 
   // Helper card generator
@@ -873,8 +928,16 @@ function App() {
         </View>
       )}
 
-      {/* CONTENU PRINCIPAL AVEC TRANSITION */}
-      <Animated.View style={[styles.mainContent, { opacity: tabFadeAnim }]}>
+      {/* CONTENU PRINCIPAL AVEC TRANSITION + SWIPE GAUCHE/DROITE POUR CHANGER D'ONGLET */}
+      <Animated.View
+        style={[styles.mainContent, { opacity: tabFadeAnim }]}
+        {...(activeTab !== 'GAME' && profileSubSection === null ? {
+          onStartShouldSetResponder: () => false,
+          onMoveShouldSetResponder: (_, gs) =>
+            Math.abs(gs.dx) > 18 && Math.abs(gs.dy) < 60 && Math.abs(gs.dx) > Math.abs(gs.dy),
+          onResponderRelease: (_, gs) => handleSwipeTabs(gs.dx),
+        } : {})}
+      >
 
         {/* TAB 1: ACCUEIL */}
         {activeTab === 'HOME' && (
@@ -1159,12 +1222,13 @@ function App() {
 
             <ScrollView contentContainerStyle={styles.profileScroll}>
               {profileSubSection ? (
-                /* SOUS-SECTIONS AVEC ANIMATION DE GLISSEMENT VERTICAL (SLIDE UP / SLIDE DOWN) */
+                /* SOUS-SECTIONS AVEC ANIMATION DE GLISSEMENT VERTICAL (SLIDE UP / SLIDE DOWN) + SWIPE DROITE POUR FERMER */
                 <Animated.View 
                   style={[
                     styles.subSectionContainer, 
                     { transform: [{ translateY: subSectionSlideAnim }] }
                   ]}
+                  {...swipeSubSectionPanResponder.panHandlers}
                 >
 
                   {/* 1. STATISTIQUES AVANCÉES COMPLETES */}
