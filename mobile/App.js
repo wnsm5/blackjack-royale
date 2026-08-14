@@ -23,6 +23,7 @@ import {
   Settings,
   HelpCircle,
   ChevronRight,
+  ChevronLeft,
   LogOut,
   LifeBuoy,
   Layers,
@@ -41,21 +42,21 @@ import {
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
-// 10 DOS DE CARTES DE LUXE SANS EMOJI (AUTHENTIC CASINO DESIGNS)
+// 10 DOS DE CARTES DE LUXE AVEC MOTIFS GÉOMÉTRIQUES UNIQUE (AUTHENTIC VECTOR PATTERNS)
 const INITIAL_CARD_BACKS = [
-  { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#fca5a5', price: 0, unlocked: true },
-  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', price: 50, unlocked: true },
-  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', price: 100, unlocked: true },
-  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', price: 100, unlocked: true },
-  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', price: 150, unlocked: true },
-  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', price: 150, unlocked: true },
-  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', price: 200, unlocked: true },
-  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', price: 250, unlocked: true },
-  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', price: 250, unlocked: true },
-  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', price: 300, unlocked: true },
+  { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#fca5a5', pattern: 'lattice', price: 0, unlocked: true },
+  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', pattern: 'stripes', price: 50, unlocked: true },
+  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', pattern: 'diamonds', price: 100, unlocked: true },
+  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', pattern: 'crosshatch', price: 100, unlocked: true },
+  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', pattern: 'chevron', price: 150, unlocked: true },
+  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', pattern: 'neon_grid', price: 150, unlocked: true },
+  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', pattern: 'radial', price: 200, unlocked: true },
+  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', pattern: 'double_ring', price: 250, unlocked: true },
+  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', pattern: 'hex', price: 250, unlocked: true },
+  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', pattern: 'circuits', price: 300, unlocked: true },
 ];
 
-// Visual Pattern Component for Card Backs (No emojis, authentic casino geometry)
+// Rich Pattern Component for Card Backs (Authentic unique geometry per skin)
 function CardBackVisual({ skin, width = 58, height = 84 }) {
   const cornerRadius = Math.round(width * 0.14);
   const borderThickness = Math.max(1.5, Math.round(width * 0.035));
@@ -85,25 +86,50 @@ function CardBackVisual({ skin, width = 58, height = 84 }) {
           position: 'relative',
         }}
       >
-        {/* Diamond Lattice Filigree */}
+        {/* Motifs Géométriques distincts par Skin */}
+        {skin.pattern === 'stripes' ? (
+          <View style={{ position: 'absolute', width: '100%', height: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
+            <View style={{ width: '85%', height: 1.5, backgroundColor: skin.border, opacity: 0.7 }} />
+            <View style={{ width: '85%', height: 1.5, backgroundColor: skin.border, opacity: 0.7 }} />
+            <View style={{ width: '85%', height: 1.5, backgroundColor: skin.border, opacity: 0.7 }} />
+            <View style={{ width: '85%', height: 1.5, backgroundColor: skin.border, opacity: 0.7 }} />
+          </View>
+        ) : skin.pattern === 'diamonds' ? (
+          <View
+            style={{
+              position: 'absolute',
+              width: '65%',
+              height: '65%',
+              borderWidth: 1.5,
+              borderColor: skin.border,
+              transform: [{ rotate: '45deg' }],
+            }}
+          />
+        ) : skin.pattern === 'chevron' ? (
+          <View style={{ position: 'absolute', width: '75%', height: '75%', borderRadius: cornerRadius, borderWidth: 1, borderColor: skin.border, borderStyle: 'dashed' }} />
+        ) : skin.pattern === 'radial' ? (
+          <View style={{ position: 'absolute', width: '70%', height: '70%', borderRadius: 100, borderWidth: 1.5, borderColor: skin.border, borderStyle: 'dotted' }} />
+        ) : (
+          <View
+            style={{
+              position: 'absolute',
+              width: '82%',
+              height: '82%',
+              borderRadius: cornerRadius - 4,
+              borderWidth: 1,
+              borderColor: skin.border,
+              borderStyle: 'dashed',
+              opacity: 0.6,
+            }}
+          />
+        )}
+
+        {/* Emblème Central de Luxe */}
         <View
           style={{
-            position: 'absolute',
-            width: '82%',
-            height: '82%',
-            borderRadius: cornerRadius - 4,
-            borderWidth: 1,
-            borderColor: skin.border,
-            borderStyle: 'dashed',
-            opacity: 0.6,
-          }}
-        />
-        {/* Center Luxury Emblem */}
-        <View
-          style={{
-            width: '46%',
-            height: '46%',
-            borderRadius: Math.round(width * 0.23),
+            width: '44%',
+            height: '44%',
+            borderRadius: Math.round(width * 0.22),
             borderWidth: 1.5,
             borderColor: skin.border,
             alignItems: 'center',
@@ -113,9 +139,9 @@ function CardBackVisual({ skin, width = 58, height = 84 }) {
         >
           <View
             style={{
-              width: '44%',
-              height: '44%',
-              borderRadius: Math.round(width * 0.11),
+              width: '42%',
+              height: '42%',
+              borderRadius: Math.round(width * 0.1),
               backgroundColor: skin.border,
             }}
           />
@@ -1026,307 +1052,319 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL ENRICHI */}
+        {/* TAB 3: PROFIL ENRICHI (AVEC EN-TÊTE FIXE ET MINI PREVIEW DE CARTE ÉQUIPÉE) */}
         {activeTab === 'PROFILE' && (
-          <ScrollView contentContainerStyle={styles.profileScroll}>
-            {profileSubSection ? (
-              <Animated.View style={[styles.subSectionContainer, { opacity: subSectionAnim }]}>
+          <View style={{ flex: 1 }}>
+            
+            {/* EN-TÊTE FIXE QUAND ON EST DANS UNE SOUS-SECTION DU PROFIL */}
+            {profileSubSection && (
+              <View style={styles.stickySubHeaderBar}>
                 <TouchableOpacity 
-                  style={styles.backToProfileBtn} 
+                  style={styles.stickyBackBtnIconOnly} 
                   onPress={() => changeSubSection(null)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.backToProfileText}>← RETOUR PROFIL</Text>
+                  <ChevronLeft size={22} color="#ffffff" />
                 </TouchableOpacity>
 
-                {/* 1. STATISTIQUES */}
-                {profileSubSection === 'STATS' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>STATISTIQUES AVANCÉES & PROGRESSION</Text>
+                <View style={styles.equippedMiniCardHeaderRight}>
+                  <CardBackVisual skin={activeCardSkin} width={24} height={34} />
+                </View>
+              </View>
+            )}
 
-                    <View style={styles.chartContainer}>
-                      <Text style={styles.chartTitle}>PROGRESSION DU SOLDE (RÉCENT)</Text>
-                      <View style={styles.chartBarsRow}>
-                        {balanceHistory.slice(-10).map((val, idx) => {
-                          const maxVal = Math.max(...balanceHistory, 150);
-                          const barHeight = Math.min(100, Math.max(15, (val / maxVal) * 80));
-                          return (
-                            <View key={idx} style={styles.chartColumn}>
-                              <Text style={styles.chartBarValue}>{val}</Text>
-                              <View style={[styles.chartBar, { height: barHeight, backgroundColor: val >= 100 ? '#16a34a' : '#dc2626' }]} />
+            <ScrollView contentContainerStyle={styles.profileScroll}>
+              {profileSubSection ? (
+                <Animated.View style={[styles.subSectionContainer, { opacity: subSectionAnim }]}>
+
+                  {/* 1. STATISTIQUES */}
+                  {profileSubSection === 'STATS' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>STATISTIQUES AVANCÉES & PROGRESSION</Text>
+
+                      <View style={styles.chartContainer}>
+                        <Text style={styles.chartTitle}>PROGRESSION DU SOLDE (RÉCENT)</Text>
+                        <View style={styles.chartBarsRow}>
+                          {balanceHistory.slice(-10).map((val, idx) => {
+                            const maxVal = Math.max(...balanceHistory, 150);
+                            const barHeight = Math.min(100, Math.max(15, (val / maxVal) * 80));
+                            return (
+                              <View key={idx} style={styles.chartColumn}>
+                                <Text style={styles.chartBarValue}>{val}</Text>
+                                <View style={[styles.chartBar, { height: barHeight, backgroundColor: val >= 100 ? '#16a34a' : '#dc2626' }]} />
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={styles.statsGrid}>
+                        <View style={styles.statBox}>
+                          <Text style={styles.statNumber}>{history.length}</Text>
+                          <Text style={styles.statLabel}>Manches Jouées</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                          <Text style={[styles.statNumber, styles.textGreen]}>{history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
+                          <Text style={styles.statLabel}>Victoires</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                          <Text style={styles.statNumber}>60%</Text>
+                          <Text style={styles.statLabel}>Taux de Victoire</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                          <Text style={styles.statNumber}>75%</Text>
+                          <Text style={styles.statLabel}>Taux Double</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* 2. SUCCÈS & TROPHÉES */}
+                  {profileSubSection === 'ACHIEVEMENTS' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
+                      
+                      <View style={styles.achievementRow}>
+                        <Award size={20} color="#16a34a" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>Premier Pas</Text>
+                          <Text style={styles.achievementDesc}>Gagner votre première manche</Text>
+                        </View>
+                        <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                      </View>
+
+                      <View style={styles.achievementRow}>
+                        <Award size={20} color="#16a34a" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>High Roller</Text>
+                          <Text style={styles.achievementDesc}>Miser 100 CR en une seule manche</Text>
+                        </View>
+                        <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                      </View>
+
+                      <View style={styles.achievementRow}>
+                        <Zap size={20} color="#d97706" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>Maître du Double</Text>
+                          <Text style={styles.achievementDesc}>Réussir 3 Double Down gagnants (2/3)</Text>
+                        </View>
+                        <View style={styles.progressBadge}><Text style={styles.progressText}>2/3</Text></View>
+                      </View>
+
+                      <View style={styles.achievementRow}>
+                        <Repeat size={20} color="#2563eb" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>Pro du Split</Text>
+                          <Text style={styles.achievementDesc}>Gagner une manche après un Split</Text>
+                        </View>
+                        <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                      </View>
+
+                      <View style={styles.achievementRow}>
+                        <Lock size={20} color="#525252" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>Blackjack Royale</Text>
+                          <Text style={styles.achievementDesc}>Obtenir 3 Blackjacks naturels (1/3)</Text>
+                        </View>
+                        <View style={styles.lockedBadge}><Text style={styles.lockedText}>1/3</Text></View>
+                      </View>
+
+                      <View style={styles.achievementRow}>
+                        <Palette size={20} color="#525252" />
+                        <View style={styles.achievementInfo}>
+                          <Text style={styles.achievementTitle}>Collectionneur</Text>
+                          <Text style={styles.achievementDesc}>Débloquer 5 Dos de Cartes (2/5)</Text>
+                        </View>
+                        <View style={styles.lockedBadge}><Text style={styles.lockedText}>2/5</Text></View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* 3. DÉFIS QUOTIDIENS */}
+                  {profileSubSection === 'CHALLENGES' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>DÉFIS QUOTIDIENS</Text>
+                      
+                      {challenges.map((ch) => (
+                        <View key={ch.id} style={styles.challengeCard}>
+                          <View style={styles.challengeHeader}>
+                            <View style={styles.challengeTitleRow}>
+                              <Flame size={16} color="#f43f5e" />
+                              <Text style={styles.challengeTitleText}>{ch.title}</Text>
                             </View>
+                            <Text style={styles.challengeRewardText}>+{ch.reward} CR</Text>
+                          </View>
+
+                          <View style={styles.challengeProgressRow}>
+                            <View style={styles.progressBarBg}>
+                              <View style={[styles.progressBarFill, { width: `${Math.min(100, (ch.progress / ch.total) * 100)}%` }]} />
+                            </View>
+                            <Text style={styles.progressCountText}>{ch.progress}/{ch.total}</Text>
+                          </View>
+
+                          {ch.claimed ? (
+                            <View style={styles.claimedBtn}>
+                              <Check size={12} color="#a3a3a3" />
+                              <Text style={styles.claimedBtnText}>RÉCOMPENSE RÉCLAMÉE</Text>
+                            </View>
+                          ) : ch.progress >= ch.total ? (
+                            <TouchableOpacity style={styles.claimRewardBtn} onPress={() => handleClaimChallenge(ch.id)}>
+                              <Text style={styles.claimRewardBtnText}>RÉCLAMER (+{ch.reward} CR)</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.inProgressBtn}>
+                              <Text style={styles.inProgressBtnText}>EN COURS</Text>
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* 4. DOS DE CARTES (GRANDE GRILLE 2 COLONNES PUREMENT VISUELLE SANS TEXTE) */}
+                  {profileSubSection === 'CARDBACKS' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>DOS DE CARTES</Text>
+
+                      <View style={styles.cardSkinsTwoColumnGrid}>
+                        {cardBackSkins.map((skin) => {
+                          const isEquipped = equippedCardBackId === skin.id;
+                          return (
+                            <TouchableOpacity
+                              key={skin.id}
+                              style={[
+                                styles.bigSkinCardContainer,
+                                isEquipped && styles.bigSkinCardContainerEquipped,
+                              ]}
+                              onPress={() => handleEquipCardBack(skin)}
+                              activeOpacity={0.85}
+                            >
+                              <CardBackVisual skin={skin} width={136} height={196} />
+                            </TouchableOpacity>
                           );
                         })}
                       </View>
                     </View>
+                  )}
 
-                    <View style={styles.statsGrid}>
-                      <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>{history.length}</Text>
-                        <Text style={styles.statLabel}>Manches Jouées</Text>
-                      </View>
-                      <View style={styles.statBox}>
-                        <Text style={[styles.statNumber, styles.textGreen]}>{history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
-                        <Text style={styles.statLabel}>Victoires</Text>
-                      </View>
-                      <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>60%</Text>
-                        <Text style={styles.statLabel}>Taux de Victoire</Text>
-                      </View>
-                      <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>75%</Text>
-                        <Text style={styles.statLabel}>Taux Double</Text>
-                      </View>
+                  {/* 5. APPRENDRE / RÈGLES */}
+                  {profileSubSection === 'LEARN' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>RÈGLES ET TACTIQUES DU BLACKJACK</Text>
+                      <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
+                      <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
+                      <Text style={styles.subText}>• Double Down : Doubler la mise pour recevoir 1 seule carte.</Text>
+                      <Text style={styles.subText}>• Split : Séparer 2 cartes identiques en 2 mains indépendantes.</Text>
+                      <Text style={styles.subText}>• Assurance : Protégez-vous si la carte visible du Croupier est un As.</Text>
                     </View>
+                  )}
+
+                  {/* 6. PARAMÈTRES */}
+                  {profileSubSection === 'SETTINGS' && (
+                    <View style={styles.subCard}>
+                      <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
+                      <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
+                      <Text style={styles.subText}>• Effets sonores : Activé</Text>
+                      <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit</Text>
+                      <Text style={styles.subText}>• Version App : 2.5.0 Standalone Native</Text>
+                    </View>
+                  )}
+
+                </Animated.View>
+              ) : (
+                /* MENU PROFIL PRINCIPAL */
+                <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
+                  <View style={styles.profileHeaderCard}>
+                    <View style={styles.avatarCircle}>
+                      <User size={28} color="#ffffff" />
+                    </View>
+                    <Text style={styles.profileUsername}>Offsuit_Player</Text>
+                    <Text style={styles.profileLevelText}>Joueur Niveau 5 • {credits} CR</Text>
                   </View>
-                )}
 
-                {/* 2. SUCCÈS & TROPHÉES */}
-                {profileSubSection === 'ACHIEVEMENTS' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
-                    
-                    <View style={styles.achievementRow}>
-                      <Award size={20} color="#16a34a" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>Premier Pas</Text>
-                        <Text style={styles.achievementDesc}>Gagner votre première manche</Text>
-                      </View>
-                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
-                    </View>
+                  {credits === 0 && (
+                    <TouchableOpacity style={styles.failsafeBtn} onPress={handleClaimFailsafe}>
+                      <LifeBuoy size={18} color="#ffffff" />
+                      <Text style={styles.failsafeBtnText}>OBTENIR 100 CR GRATUITS</Text>
+                    </TouchableOpacity>
+                  )}
 
-                    <View style={styles.achievementRow}>
-                      <Award size={20} color="#16a34a" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>High Roller</Text>
-                        <Text style={styles.achievementDesc}>Miser 100 CR en une seule manche</Text>
+                  <View style={styles.menuOptionsGroup}>
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('STATS')}>
+                      <View style={styles.optionLeft}>
+                        <BarChart2 size={18} color="#a3a3a3" />
+                        <Text style={styles.optionLabel}>Statistiques avancées & Solde</Text>
                       </View>
-                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
-                    </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
 
-                    <View style={styles.achievementRow}>
-                      <Zap size={20} color="#d97706" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>Maître du Double</Text>
-                        <Text style={styles.achievementDesc}>Réussir 3 Double Down gagnants (2/3)</Text>
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CARDBACKS')}>
+                      <View style={styles.optionLeft}>
+                        <Palette size={18} color="#e11d48" />
+                        <Text style={styles.optionLabel}>Dos de Cartes (10 Styles)</Text>
                       </View>
-                      <View style={styles.progressBadge}><Text style={styles.progressText}>2/3</Text></View>
-                    </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
 
-                    <View style={styles.achievementRow}>
-                      <Repeat size={20} color="#2563eb" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>Pro du Split</Text>
-                        <Text style={styles.achievementDesc}>Gagner une manche après un Split</Text>
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CHALLENGES')}>
+                      <View style={styles.optionLeft}>
+                        <Flame size={18} color="#f59e0b" />
+                        <Text style={styles.optionLabel}>Défis Quotidiens</Text>
                       </View>
-                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
-                    </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
 
-                    <View style={styles.achievementRow}>
-                      <Lock size={20} color="#525252" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>Blackjack Royale</Text>
-                        <Text style={styles.achievementDesc}>Obtenir 3 Blackjacks naturels (1/3)</Text>
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('ACHIEVEMENTS')}>
+                      <View style={styles.optionLeft}>
+                        <Award size={18} color="#a3a3a3" />
+                        <Text style={styles.optionLabel}>Succès & Trophées</Text>
                       </View>
-                      <View style={styles.lockedBadge}><Text style={styles.lockedText}>1/3</Text></View>
-                    </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
 
-                    <View style={styles.achievementRow}>
-                      <Palette size={20} color="#525252" />
-                      <View style={styles.achievementInfo}>
-                        <Text style={styles.achievementTitle}>Collectionneur</Text>
-                        <Text style={styles.achievementDesc}>Débloquer 5 Dos de Cartes (2/5)</Text>
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('LEARN')}>
+                      <View style={styles.optionLeft}>
+                        <HelpCircle size={18} color="#a3a3a3" />
+                        <Text style={styles.optionLabel}>Règles & Stratégie</Text>
                       </View>
-                      <View style={styles.lockedBadge}><Text style={styles.lockedText}>2/5</Text></View>
-                    </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('SETTINGS')}>
+                      <View style={styles.optionLeft}>
+                        <Settings size={18} color="#a3a3a3" />
+                        <Text style={styles.optionLabel}>Paramètres</Text>
+                      </View>
+                      <ChevronRight size={16} color="#525252" />
+                    </TouchableOpacity>
                   </View>
-                )}
-
-                {/* 3. DÉFIS QUOTIDIENS */}
-                {profileSubSection === 'CHALLENGES' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>DÉFIS QUOTIDIENS</Text>
-                    
-                    {challenges.map((ch) => (
-                      <View key={ch.id} style={styles.challengeCard}>
-                        <View style={styles.challengeHeader}>
-                          <View style={styles.challengeTitleRow}>
-                            <Flame size={16} color="#f43f5e" />
-                            <Text style={styles.challengeTitleText}>{ch.title}</Text>
-                          </View>
-                          <Text style={styles.challengeRewardText}>+{ch.reward} CR</Text>
-                        </View>
-
-                        <View style={styles.challengeProgressRow}>
-                          <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${Math.min(100, (ch.progress / ch.total) * 100)}%` }]} />
-                          </View>
-                          <Text style={styles.progressCountText}>{ch.progress}/{ch.total}</Text>
-                        </View>
-
-                        {ch.claimed ? (
-                          <View style={styles.claimedBtn}>
-                            <Check size={12} color="#a3a3a3" />
-                            <Text style={styles.claimedBtnText}>RÉCOMPENSE RÉCLAMÉE</Text>
-                          </View>
-                        ) : ch.progress >= ch.total ? (
-                          <TouchableOpacity style={styles.claimRewardBtn} onPress={() => handleClaimChallenge(ch.id)}>
-                            <Text style={styles.claimRewardBtnText}>RÉCLAMER (+{ch.reward} CR)</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <View style={styles.inProgressBtn}>
-                            <Text style={styles.inProgressBtnText}>EN COURS</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 4. DOS DE CARTES (GRANDE GRILLE 2 COLONNES SANS EMOJI NI TEXTE) */}
-                {profileSubSection === 'CARDBACKS' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>DOS DE CARTES</Text>
-
-                    <View style={styles.cardSkinsTwoColumnGrid}>
-                      {cardBackSkins.map((skin) => {
-                        const isEquipped = equippedCardBackId === skin.id;
-                        return (
-                          <TouchableOpacity
-                            key={skin.id}
-                            style={[
-                              styles.bigSkinCardContainer,
-                              isEquipped && styles.bigSkinCardContainerEquipped,
-                            ]}
-                            onPress={() => handleEquipCardBack(skin)}
-                            activeOpacity={0.85}
-                          >
-                            <CardBackVisual skin={skin} width={136} height={196} />
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-
-                {/* 5. APPRENDRE / RÈGLES */}
-                {profileSubSection === 'LEARN' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>RÈGLES ET TACTIQUES DU BLACKJACK</Text>
-                    <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
-                    <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
-                    <Text style={styles.subText}>• Double Down : Doubler la mise pour recevoir 1 seule carte.</Text>
-                    <Text style={styles.subText}>• Split : Séparer 2 cartes identiques en 2 mains indépendantes.</Text>
-                    <Text style={styles.subText}>• Assurance : Protégez-vous si la carte visible du Croupier est un As.</Text>
-                  </View>
-                )}
-
-                {/* 6. PARAMÈTRES */}
-                {profileSubSection === 'SETTINGS' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
-                    <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
-                    <Text style={styles.subText}>• Effets sonores : Activé</Text>
-                    <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit</Text>
-                    <Text style={styles.subText}>• Version App : 2.5.0 Standalone Native</Text>
-                  </View>
-                )}
-
-              </Animated.View>
-            ) : (
-              <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
-                <View style={styles.profileHeaderCard}>
-                  <View style={styles.avatarCircle}>
-                    <User size={28} color="#ffffff" />
-                  </View>
-                  <Text style={styles.profileUsername}>Offsuit_Player</Text>
-                  <Text style={styles.profileLevelText}>Joueur Niveau 5 • {credits} CR</Text>
-                </View>
-
-                {credits === 0 && (
-                  <TouchableOpacity style={styles.failsafeBtn} onPress={handleClaimFailsafe}>
-                    <LifeBuoy size={18} color="#ffffff" />
-                    <Text style={styles.failsafeBtnText}>OBTENIR 100 CR GRATUITS</Text>
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.menuOptionsGroup}>
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('STATS')}>
-                    <View style={styles.optionLeft}>
-                      <BarChart2 size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Statistiques avancées & Solde</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CARDBACKS')}>
-                    <View style={styles.optionLeft}>
-                      <Palette size={18} color="#e11d48" />
-                      <Text style={styles.optionLabel}>Dos de Cartes (10 Styles)</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CHALLENGES')}>
-                    <View style={styles.optionLeft}>
-                      <Flame size={18} color="#f59e0b" />
-                      <Text style={styles.optionLabel}>Défis Quotidiens</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('ACHIEVEMENTS')}>
-                    <View style={styles.optionLeft}>
-                      <Award size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Succès & Trophées</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('LEARN')}>
-                    <View style={styles.optionLeft}>
-                      <HelpCircle size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Règles & Stratégie</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('SETTINGS')}>
-                    <View style={styles.optionLeft}>
-                      <Settings size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Paramètres</Text>
-                    </View>
-                    <ChevronRight size={16} color="#525252" />
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            )}
-          </ScrollView>
+                </Animated.View>
+              )}
+            </ScrollView>
+          </View>
         )}
 
       </Animated.View>
 
-      {/* BARRE EN BAS (MASQUÉE PENDANT LE JEU) */}
+      {/* BARRE EN BAS (ICÔNES SEULEMENT, SANS TEXTE) */}
       {activeTab !== 'GAME' && (
         <View style={styles.bottomTabBar}>
           <View style={[styles.tabItem, styles.tabItemDisabled]}>
-            <ShoppingBag size={20} color="#404040" />
-            <Text style={styles.tabLabelDisabled}>BOUTIQUE</Text>
+            <ShoppingBag size={22} color="#404040" />
           </View>
 
           <TouchableOpacity 
             style={[styles.tabItem, activeTab === 'HOME' && styles.tabItemActive]} 
             onPress={() => changeTab('HOME')}
           >
-            <Home size={22} color={activeTab === 'HOME' ? '#ffffff' : '#737373'} />
-            <Text style={[activeTab === 'HOME' ? styles.tabLabelActive : styles.tabLabel]}>ACCUEIL</Text>
+            <Home size={24} color={activeTab === 'HOME' ? '#ffffff' : '#737373'} />
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.tabItem, activeTab === 'PROFILE' && styles.tabItemActive]} 
             onPress={() => changeTab('PROFILE')}
           >
-            <User size={22} color={activeTab === 'PROFILE' ? '#ffffff' : '#737373'} />
-            <Text style={[activeTab === 'PROFILE' ? styles.tabLabelActive : styles.tabLabel]}>PROFIL</Text>
+            <User size={24} color={activeTab === 'PROFILE' ? '#ffffff' : '#737373'} />
           </TouchableOpacity>
         </View>
       )}
@@ -1975,18 +2013,33 @@ const styles = StyleSheet.create({
   subSectionContainer: {
     gap: 12,
   },
-  backToProfileBtn: {
-    backgroundColor: '#262626',
-    paddingHorizontal: 14,
+  
+  /* EN-TÊTE FIXE POUR SOUS-SECTIONS DE PROFIL (FLÈCHE ICONE SEULE + MINI DOS DE CARTE ÉQUIPÉ) */
+  stickySubHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
+    backgroundColor: '#121212',
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
   },
-  backToProfileText: {
-    color: '#ffffff',
-    fontWeight: '900',
-    fontSize: 11,
+  stickyBackBtnIconOnly: {
+    backgroundColor: '#262626',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#404040',
   },
+  equippedMiniCardHeaderRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   subCard: {
     backgroundColor: '#121212',
     borderWidth: 1,
@@ -2189,7 +2242,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
 
-  /* DOS DE CARTES GRANDE GRILLE 2 COLONNES PUREMENT VISUELLE SANS EMOJI NI TEXTE */
+  /* DOS DE CARTES GRANDE GRILLE 2 COLONNES PUREMENT VISUELLE SANS TEXTE */
   cardSkinsTwoColumnGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2253,47 +2306,25 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  /* BOTTOM TAB BAR */
+  /* BOTTOM TAB BAR (ICÔNES SEULEMENT, SANS TEXTE) */
   bottomTabBar: {
     flexDirection: 'row',
     backgroundColor: '#121212',
     borderTopWidth: 1,
     borderTopColor: '#262626',
-    paddingVertical: 8,
+    paddingVertical: 14,
     paddingHorizontal: 16,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
   },
   tabItemActive: {
     opacity: 1,
   },
   tabItemDisabled: {
     opacity: 0.35,
-  },
-  tabLabel: {
-    color: '#737373',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginTop: 3,
-  },
-  tabLabelActive: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginTop: 3,
-  },
-  tabLabelDisabled: {
-    color: '#404040',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginTop: 3,
   },
 
   /* LEAVE CONFIRMATION MODAL */
