@@ -31,12 +31,31 @@ import {
   Maximize2,
   ShieldAlert,
   BarChart2,
-  Coins
+  Coins,
+  Palette,
+  CheckCircle2,
+  Lock,
+  Flame,
+  Check
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
-// Custom sleek Casino Chip component (Refined Minimalist Design)
+// 10 DOS DE CARTES PERSONNALISÉS (CARD BACK SKINS)
+const INITIAL_CARD_BACKS = [
+  { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#e5e5e5', symbol: '♠', price: 0, unlocked: true },
+  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', symbol: '♠', price: 50, unlocked: true },
+  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', symbol: '👑', price: 100, unlocked: false },
+  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', symbol: '♠', price: 100, unlocked: false },
+  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', symbol: '💎', price: 150, unlocked: false },
+  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', symbol: '⚡', price: 150, unlocked: false },
+  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', symbol: '🔮', price: 200, unlocked: false },
+  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', symbol: '🏆', price: 250, unlocked: false },
+  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', symbol: '🛡️', price: 250, unlocked: false },
+  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', symbol: '🌐', price: 300, unlocked: false },
+];
+
+// Custom sleek Casino Chip component
 function CasinoChip({ value, onPress, size = 36 }) {
   const chipColors = {
     1: { bg: '#262626', border: '#525252', text: '#ffffff', accent: '#404040' },
@@ -69,7 +88,7 @@ function CasinoChip({ value, onPress, size = 36 }) {
 }
 
 // Smooth Animated Card Component (Card Slide & Deal Animation)
-function AnimatedPlayingCard({ card, compact = false, index = 0 }) {
+function AnimatedPlayingCard({ card, compact = false, index = 0, cardSkin = INITIAL_CARD_BACKS[0] }) {
   const dealAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -93,10 +112,8 @@ function AnimatedPlayingCard({ card, compact = false, index = 0 }) {
   });
 
   const cardStyle = compact ? styles.cardFrontCompact : styles.cardFront;
-  const backStyle = compact ? styles.cardBackCompact : styles.cardBack;
   const wrapperStyle = compact ? styles.cardWrapperCompact : styles.cardWrapper;
   
-  // Overlap cards horizontally so they never overflow screen width
   const overlapMargin = index > 0 ? (compact ? -20 : -26) : 0;
 
   return (
@@ -120,9 +137,9 @@ function AnimatedPlayingCard({ card, compact = false, index = 0 }) {
           </Text>
         </View>
       ) : (
-        <View style={backStyle}>
-          <View style={styles.cardBackInner}>
-            <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>♠</Text>
+        <View style={[compact ? styles.cardBackCompact : styles.cardBack, { backgroundColor: cardSkin.bg, borderColor: cardSkin.border }]}>
+          <View style={[styles.cardBackInner, { backgroundColor: cardSkin.innerBg }]}>
+            <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>{cardSkin.symbol}</Text>
           </View>
         </View>
       )}
@@ -132,7 +149,7 @@ function AnimatedPlayingCard({ card, compact = false, index = 0 }) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('HOME'); // 'HOME' | 'GAME' | 'PROFILE'
-  const [profileSubSection, setProfileSubSection] = useState(null); // 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'SETTINGS' | 'LEARN'
+  const [profileSubSection, setProfileSubSection] = useState(null); // 'STATS' | 'ACHIEVEMENTS' | 'CHALLENGES' | 'CARDBACKS' | 'LEARN' | 'SETTINGS'
   
   const [credits, setCredits] = useState(100);
   const [currentBet, setCurrentBet] = useState(10);
@@ -147,6 +164,10 @@ function App() {
   // Shoe / Pioche state (6 decks = 312 cards)
   const [cardsRemaining, setCardsRemaining] = useState(312);
 
+  // Card Back Skins State (10 total)
+  const [cardBackSkins, setCardBackSkins] = useState(INITIAL_CARD_BACKS);
+  const [equippedCardBackId, setEquippedCardBackId] = useState('ROUGE_OFFSUIT');
+
   // Solde history tracking for progression chart
   const [balanceHistory, setBalanceHistory] = useState([100, 110, 100, 120, 110, 130, 125, 140, 100]);
 
@@ -157,6 +178,13 @@ function App() {
   // Leave confirmation modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
+  // Daily Challenges State
+  const [challenges, setChallenges] = useState([
+    { id: 1, title: 'Jouer 5 manches', reward: 25, progress: 4, total: 5, claimed: false },
+    { id: 2, title: 'Gagner avec un Double Down', reward: 50, progress: 1, total: 1, claimed: false },
+    { id: 3, title: 'Atteindre un solde de 150 CR', reward: 40, progress: 140, total: 150, claimed: false },
+  ]);
+
   // Match History state
   const [history, setHistory] = useState([
     { id: 1, type: 'WIN', bet: 10, payout: +20, score: '20 vs 18', date: 'Aujourd\'hui 22:04' },
@@ -165,6 +193,8 @@ function App() {
     { id: 4, type: 'BLACKJACK', bet: 10, payout: +25, score: '21 BJ vs 18', date: 'Hier 23:12' },
     { id: 5, type: 'LOSS', bet: 5, payout: -5, score: 'BUST (23)', date: 'Hier 22:50' },
   ]);
+
+  const activeCardSkin = cardBackSkins.find(s => s.id === equippedCardBackId) || cardBackSkins[0];
 
   // Handle Tab Change with Fade Animation
   const changeTab = (newTab) => {
@@ -247,7 +277,7 @@ function App() {
     setCurrentBet(0);
   };
 
-  // MISE MAX (MAX BET)
+  // MISE MAX
   const handleMaxBet = () => {
     if (isDealing || credits <= 0) return;
     setCurrentBet(credits);
@@ -258,6 +288,26 @@ function App() {
   const handleClaimFailsafe = () => {
     setCredits(100);
     setBalanceHistory(prev => [...prev, 100]);
+  };
+
+  // Unlock Card Back
+  const handleUnlockCardBack = (skin) => {
+    if (skin.unlocked) {
+      setEquippedCardBackId(skin.id);
+    } else if (credits >= skin.price) {
+      setCredits(prev => prev - skin.price);
+      setCardBackSkins(prev => prev.map(s => s.id === skin.id ? { ...s, unlocked: true } : s));
+      setEquippedCardBackId(skin.id);
+    }
+  };
+
+  // Claim Challenge Reward
+  const handleClaimChallenge = (chId) => {
+    const ch = challenges.find(c => c.id === chId);
+    if (ch && !ch.claimed && ch.progress >= ch.total) {
+      setCredits(prev => prev + ch.reward);
+      setChallenges(prev => prev.map(c => c.id === chId ? { ...c, claimed: true } : c));
+    }
   };
 
   // Confirm leave table action
@@ -629,7 +679,6 @@ function App() {
   const canSplit = game && game.status === 'PLAYING' && !game.isSplit && game.playerHand.length === 2 && (game.playerHand[0].val === game.playerHand[1].val) && credits >= game.bet && !isDealing;
   const canInsurance = game && game.status === 'PLAYING' && game.dealerHand.length >= 1 && game.dealerHand[0].rank === 'A' && !hasInsurance && credits >= Math.floor(game.bet / 2) && !isDealing;
 
-  // Group bet chips by value for clean summary
   const chipCounts = betChips.reduce((acc, val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -713,7 +762,7 @@ function App() {
             <View style={styles.tableFrame}>
               <View style={styles.tableInnerFelt}>
 
-                {/* PIOCHE DE CARTE: FORMAT 58x84 SOUS LE DÉCOMPTE */}
+                {/* PIOCHE DE CARTE: FORMAT 58x84 SOUS LE DÉCOMPTE AVEC SKIN ÉQUIPÉ */}
                 <View style={styles.shoeFullContainer}>
                   <View style={styles.shoeCountBadge}>
                     <Layers size={11} color="#a3a3a3" />
@@ -721,11 +770,11 @@ function App() {
                   </View>
                   
                   <View style={styles.shoeStackWrapper}>
-                    <View style={styles.shoeCardBack3} />
-                    <View style={styles.shoeCardBack2} />
-                    <View style={styles.shoeCardBack1}>
-                      <View style={styles.cardBackInner}>
-                        <Text style={styles.cardBackSymbol}>♠</Text>
+                    <View style={[styles.shoeCardBack3, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]} />
+                    <View style={[styles.shoeCardBack2, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]} />
+                    <View style={[styles.shoeCardBack1, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]}>
+                      <View style={[styles.cardBackInner, { backgroundColor: activeCardSkin.innerBg }]}>
+                        <Text style={styles.cardBackSymbol}>{activeCardSkin.symbol}</Text>
                       </View>
                     </View>
                   </View>
@@ -750,7 +799,7 @@ function App() {
                   <View style={styles.cardsRow}>
                     {game && game.dealerHand.length > 0 ? (
                       game.dealerHand.map((card, idx) => (
-                        <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} />
+                        <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} cardSkin={activeCardSkin} />
                       ))
                     ) : (
                       <View style={styles.emptyCardSlotClean} />
@@ -793,7 +842,7 @@ function App() {
                               </View>
                               <View style={styles.cardsRowCompact}>
                                 {hand.map((card, cIdx) => (
-                                  <AnimatedPlayingCard key={card.id || cIdx} card={card} compact={true} index={cIdx} />
+                                  <AnimatedPlayingCard key={card.id || cIdx} card={card} compact={true} index={cIdx} cardSkin={activeCardSkin} />
                                 ))}
                               </View>
                             </View>
@@ -801,7 +850,7 @@ function App() {
                         </View>
                       ) : (
                         game.playerHand.map((card, idx) => (
-                          <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} />
+                          <AnimatedPlayingCard key={card.id || idx} card={card} index={idx} cardSkin={activeCardSkin} />
                         ))
                       )
                     ) : (
@@ -813,7 +862,7 @@ function App() {
               </View>
             </View>
 
-            {/* CONTROLES DE MANCHE & DE MISE ÉPURÉS */}
+            {/* CONTROLES DE MANCHE */}
             <View style={styles.gameControlsPanel}>
               {game && game.status === 'PLAYING' ? (
                 <View style={styles.actionRowContainer}>
@@ -873,7 +922,6 @@ function App() {
                     </View>
                   </View>
 
-                  {/* RÉSUMÉ SOMBRE ET ÉPURÉ DES JETONS SÉLECTIONNÉS */}
                   <View style={styles.compactBetChipsRow}>
                     {betChips.length === 0 ? (
                       <Text style={styles.noChipsHint}>Touche un jeton ci-dessous pour miser</Text>
@@ -895,7 +943,6 @@ function App() {
                     )}
                   </View>
 
-                  {/* BARRE DE JETONS ULTRA COMPACTE (36px) */}
                   <View style={styles.chipBar}>
                     {CHIP_VALUES.map((val) => (
                       <CasinoChip key={val} value={val} size={36} onPress={() => handleAddChip(val)} />
@@ -915,7 +962,7 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL */}
+        {/* TAB 3: PROFIL ENRICHI (STATS, SUCCÈS, DÉFIS, DOS DE CARTES, APPRENDRE, PARAMÈTRES) */}
         {activeTab === 'PROFILE' && (
           <ScrollView contentContainerStyle={styles.profileScroll}>
             {profileSubSection ? (
@@ -927,6 +974,7 @@ function App() {
                   <Text style={styles.backToProfileText}>← RETOUR PROFIL</Text>
                 </TouchableOpacity>
 
+                {/* 1. STATISTIQUES */}
                 {profileSubSection === 'STATS' && (
                   <View style={styles.subCard}>
                     <Text style={styles.subTitle}>STATISTIQUES AVANCÉES & PROGRESSION</Text>
@@ -947,45 +995,202 @@ function App() {
                       </View>
                     </View>
 
-                    <Text style={styles.subText}>• Total Manches Jouées : {history.length}</Text>
-                    <Text style={styles.subText}>• Victoires : {history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
-                    <Text style={styles.subText}>• Efficacité au Double : 75%</Text>
-                    <Text style={styles.subText}>• Efficacité au Split : 66%</Text>
-                    <Text style={styles.subText}>• Taux de Victoire Global : 60%</Text>
+                    <View style={styles.statsGrid}>
+                      <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>{history.length}</Text>
+                        <Text style={styles.statLabel}>Manches Jouées</Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statNumber, styles.textGreen]}>{history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
+                        <Text style={styles.statLabel}>Victoires</Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>60%</Text>
+                        <Text style={styles.statLabel}>Taux de Victoire</Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>75%</Text>
+                        <Text style={styles.statLabel}>Taux Double</Text>
+                      </View>
+                    </View>
                   </View>
                 )}
 
+                {/* 2. SUCCÈS & TROPHÉES */}
+                {profileSubSection === 'ACHIEVEMENTS' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
+                    
+                    <View style={styles.achievementRow}>
+                      <Award size={20} color="#16a34a" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>Premier Pas</Text>
+                        <Text style={styles.achievementDesc}>Gagner votre première manche</Text>
+                      </View>
+                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                    </View>
+
+                    <View style={styles.achievementRow}>
+                      <Award size={20} color="#16a34a" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>High Roller</Text>
+                        <Text style={styles.achievementDesc}>Miser 100 CR en une seule manche</Text>
+                      </View>
+                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                    </View>
+
+                    <View style={styles.achievementRow}>
+                      <Zap size={20} color="#d97706" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>Maître du Double</Text>
+                        <Text style={styles.achievementDesc}>Réussir 3 Double Down gagnants (2/3)</Text>
+                      </View>
+                      <View style={styles.progressBadge}><Text style={styles.progressText}>2/3</Text></View>
+                    </View>
+
+                    <View style={styles.achievementRow}>
+                      <Repeat size={20} color="#2563eb" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>Pro du Split</Text>
+                        <Text style={styles.achievementDesc}>Gagner une manche après un Split</Text>
+                      </View>
+                      <View style={styles.unlockedBadge}><Text style={styles.unlockedText}>DÉBLOQUÉ</Text></View>
+                    </View>
+
+                    <View style={styles.achievementRow}>
+                      <Lock size={20} color="#525252" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>Blackjack Royale</Text>
+                        <Text style={styles.achievementDesc}>Obtenir 3 Blackjacks naturels (1/3)</Text>
+                      </View>
+                      <View style={styles.lockedBadge}><Text style={styles.lockedText}>1/3</Text></View>
+                    </View>
+
+                    <View style={styles.achievementRow}>
+                      <Palette size={20} color="#525252" />
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementTitle}>Collectionneur</Text>
+                        <Text style={styles.achievementDesc}>Débloquer 5 Dos de Cartes (2/5)</Text>
+                      </View>
+                      <View style={styles.lockedBadge}><Text style={styles.lockedText}>2/5</Text></View>
+                    </View>
+                  </View>
+                )}
+
+                {/* 3. DÉFIS QUOTIDIENS */}
+                {profileSubSection === 'CHALLENGES' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>DÉFIS QUOTIDIENS</Text>
+                    
+                    {challenges.map((ch) => (
+                      <View key={ch.id} style={styles.challengeCard}>
+                        <View style={styles.challengeHeader}>
+                          <View style={styles.challengeTitleRow}>
+                            <Flame size={16} color="#f43f5e" />
+                            <Text style={styles.challengeTitleText}>{ch.title}</Text>
+                          </View>
+                          <Text style={styles.challengeRewardText}>+{ch.reward} CR</Text>
+                        </View>
+
+                        <View style={styles.challengeProgressRow}>
+                          <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: `${Math.min(100, (ch.progress / ch.total) * 100)}%` }]} />
+                          </View>
+                          <Text style={styles.progressCountText}>{ch.progress}/{ch.total}</Text>
+                        </View>
+
+                        {ch.claimed ? (
+                          <View style={styles.claimedBtn}>
+                            <Check size={12} color="#a3a3a3" />
+                            <Text style={styles.claimedBtnText}>RÉCOMPENSE RÉCLAMÉE</Text>
+                          </View>
+                        ) : ch.progress >= ch.total ? (
+                          <TouchableOpacity style={styles.claimRewardBtn} onPress={() => handleClaimChallenge(ch.id)}>
+                            <Text style={styles.claimRewardBtnText}>RÉCLAMER (+{ch.reward} CR)</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.inProgressBtn}>
+                            <Text style={styles.inProgressBtnText}>EN COURS</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 4. DOS DE CARTES (10 CUSTOM SKINS) */}
+                {profileSubSection === 'CARDBACKS' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>DOS DE CARTES (10 STYLES)</Text>
+                    <Text style={styles.subText}>Sélectionnez un dos de carte pour personnaliser votre table de jeu :</Text>
+
+                    <View style={styles.cardSkinsGrid}>
+                      {cardBackSkins.map((skin) => {
+                        const isEquipped = equippedCardBackId === skin.id;
+                        return (
+                          <TouchableOpacity
+                            key={skin.id}
+                            style={[
+                              styles.skinCardItem,
+                              isEquipped && styles.skinCardItemEquipped,
+                            ]}
+                            onPress={() => handleUnlockCardBack(skin)}
+                          >
+                            <View style={[styles.miniCardBack, { backgroundColor: skin.bg, borderColor: skin.border }]}>
+                              <View style={[styles.miniCardBackInner, { backgroundColor: skin.innerBg }]}>
+                                <Text style={styles.miniCardBackSymbol}>{skin.symbol}</Text>
+                              </View>
+                            </View>
+
+                            <Text style={styles.skinNameText}>{skin.name}</Text>
+
+                            {isEquipped ? (
+                              <View style={styles.equippedBadge}>
+                                <CheckCircle2 size={10} color="#ffffff" />
+                                <Text style={styles.equippedBadgeText}>ÉQUIPÉ</Text>
+                              </View>
+                            ) : skin.unlocked ? (
+                              <View style={styles.unlockedSkinBtn}>
+                                <Text style={styles.unlockedSkinBtnText}>CHOISIR</Text>
+                              </View>
+                            ) : (
+                              <View style={styles.buySkinBtn}>
+                                <Text style={styles.buySkinBtnText}>{skin.price} CR</Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {/* 5. APPRENDRE / RÈGLES */}
+                {profileSubSection === 'LEARN' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>RÈGLES ET TACTIQUES DU BLACKJACK</Text>
+                    <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
+                    <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
+                    <Text style={styles.subText}>• Double Down : Doubler la mise pour recevoir 1 seule carte.</Text>
+                    <Text style={styles.subText}>• Split : Séparer 2 cartes identiques en 2 mains indépendantes.</Text>
+                    <Text style={styles.subText}>• Assurance : Protégez-vous si la carte visible du Croupier est un As.</Text>
+                  </View>
+                )}
+
+                {/* 6. PARAMÈTRES */}
                 {profileSubSection === 'SETTINGS' && (
                   <View style={styles.subCard}>
                     <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
                     <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
                     <Text style={styles.subText}>• Effets sonores : Activé</Text>
-                    <Text style={styles.subText}>• Thème : Sombre Épuré</Text>
+                    <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit</Text>
+                    <Text style={styles.subText}>• Version App : 2.5.0 Standalone Native</Text>
                   </View>
                 )}
 
-                {profileSubSection === 'ACHIEVEMENTS' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
-                    <Text style={styles.subText}>🏆 Premier Blackjack — Débloqué</Text>
-                    <Text style={styles.subText}>🏆 Double Gagnant — Débloqué</Text>
-                    <Text style={styles.subText}>🏆 Maitre du Split — Débloqué</Text>
-                    <Text style={styles.subText}>🔒 High Roller (Mise 100 CR) — Verrouillé</Text>
-                  </View>
-                )}
-
-                {profileSubSection === 'LEARN' && (
-                  <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>RÈGLES ET TACTIQUES</Text>
-                    <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
-                    <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
-                    <Text style={styles.subText}>• Double Down : Doubler pour 1 carte.</Text>
-                    <Text style={styles.subText}>• Split : Séparer 2 cartes identiques.</Text>
-                    <Text style={styles.subText}>• Assurance : Protégez-vous si le Croupier montre un As.</Text>
-                  </View>
-                )}
               </Animated.View>
             ) : (
+              /* MENU PROFIL PRINCIPAL ÉPURÉ & COMPLET */
               <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
                 <View style={styles.profileHeaderCard}>
                   <View style={styles.avatarCircle}>
@@ -1006,7 +1211,23 @@ function App() {
                   <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('STATS')}>
                     <View style={styles.optionLeft}>
                       <BarChart2 size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Statistiques avancées & Graphique</Text>
+                      <Text style={styles.optionLabel}>Statistiques avancées & Solde</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CARDBACKS')}>
+                    <View style={styles.optionLeft}>
+                      <Palette size={18} color="#e11d48" />
+                      <Text style={styles.optionLabel}>Dos de Cartes (10 Styles)</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CHALLENGES')}>
+                    <View style={styles.optionLeft}>
+                      <Flame size={18} color="#f59e0b" />
+                      <Text style={styles.optionLabel}>Défis Quotidiens</Text>
                     </View>
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
@@ -1337,9 +1558,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 84,
     borderRadius: 8,
-    backgroundColor: '#991b1b',
     borderWidth: 1.5,
-    borderColor: '#fca5a5',
   },
   shoeCardBack2: {
     position: 'absolute',
@@ -1348,9 +1567,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 84,
     borderRadius: 8,
-    backgroundColor: '#7f1d1d',
     borderWidth: 1.5,
-    borderColor: '#ef4444',
   },
   shoeCardBack1: {
     position: 'absolute',
@@ -1359,10 +1576,8 @@ const styles = StyleSheet.create({
     width: 58,
     height: 84,
     borderRadius: 8,
-    backgroundColor: '#991b1b',
     padding: 3,
     borderWidth: 1.5,
-    borderColor: '#e5e5e5',
   },
 
   tableCenterMarking: {
@@ -1430,11 +1645,9 @@ const styles = StyleSheet.create({
   cardBack: {
     width: 58,
     height: 84,
-    backgroundColor: '#991b1b',
     borderRadius: 8,
     padding: 3,
     borderWidth: 1.5,
-    borderColor: '#e5e5e5',
   },
   cardFrontCompact: {
     width: 44,
@@ -1449,15 +1662,12 @@ const styles = StyleSheet.create({
   cardBackCompact: {
     width: 44,
     height: 64,
-    backgroundColor: '#991b1b',
     borderRadius: 6,
     padding: 2,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
   },
   cardBackInner: {
     flex: 1,
-    backgroundColor: '#7f1d1d',
     borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1481,7 +1691,6 @@ const styles = StyleSheet.create({
   cardRankBlackSmall: { color: '#171717', fontWeight: '900', fontSize: 14 },
   cardSuitBlackSmall: { color: '#171717', fontSize: 12 },
 
-  /* CAGE DE CARTE ÉPURÉE SANS TEXTE DU TOUT */
   emptyCardSlotClean: {
     width: 120,
     height: 84,
@@ -1647,8 +1856,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 10,
   },
-  
-  /* DESIGN DES JETONS SÉLECTIONNÉS ÉPURÉ & COMPACT (AUCUN ENCOMBREMENT) */
   compactBetChipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1680,8 +1887,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontStyle: 'italic',
   },
-
-  /* BARRE DE JETONS 36PX COMPACTE ET SOMBRE */
   chipBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1704,7 +1909,6 @@ const styles = StyleSheet.create({
   chipValueText: {
     fontWeight: '900',
   },
-
   dealBtn: {
     backgroundColor: '#e11d48',
     paddingVertical: 14,
@@ -1721,7 +1925,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* PROFILE STYLES */
+  /* PROFILE STYLES ENRICHIS */
   profileScroll: {
     padding: 16,
   },
@@ -1816,8 +2020,272 @@ const styles = StyleSheet.create({
   },
   subText: {
     color: '#a3a3a3',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+    lineHeight: 18,
+  },
+
+  /* GRID STATISTIQUES */
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  statBox: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#171717',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#262626',
+    alignItems: 'center',
+  },
+  statNumber: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  statLabel: {
+    color: '#737373',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  /* RANGÉES DE SUCCÈS */
+  achievementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#171717',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  achievementInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  achievementTitle: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  achievementDesc: {
+    color: '#737373',
+    fontSize: 10,
+  },
+  unlockedBadge: {
+    backgroundColor: '#052e16',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+  unlockedText: {
+    color: '#4ade80',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  progressBadge: {
+    backgroundColor: '#262626',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  progressText: {
+    color: '#d97706',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  lockedBadge: {
+    backgroundColor: '#171717',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#404040',
+  },
+  lockedText: {
+    color: '#737373',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+
+  /* DÉFIS QUOTIDIENS */
+  challengeCard: {
+    backgroundColor: '#171717',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#262626',
+    gap: 8,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  challengeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  challengeTitleText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  challengeRewardText: {
+    color: '#4ade80',
+    fontWeight: '900',
+    fontSize: 11,
+  },
+  challengeProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#262626',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#e11d48',
+    borderRadius: 3,
+  },
+  progressCountText: {
+    color: '#a3a3a3',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  claimRewardBtn: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  claimRewardBtnText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  claimedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#262626',
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  claimedBtnText: {
+    color: '#a3a3a3',
+    fontWeight: '900',
+    fontSize: 9,
+  },
+  inProgressBtn: {
+    backgroundColor: '#262626',
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  inProgressBtnText: {
+    color: '#737373',
+    fontWeight: '900',
+    fontSize: 9,
+  },
+
+  /* DOS DE CARTES (10 SKINS GRID) */
+  cardSkinsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 6,
+  },
+  skinCardItem: {
+    width: '48%',
+    backgroundColor: '#171717',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#262626',
+    padding: 10,
+    alignItems: 'center',
+    gap: 6,
+  },
+  skinCardItemEquipped: {
+    borderColor: '#e11d48',
+    borderWidth: 2,
+    backgroundColor: '#1f1416',
+  },
+  miniCardBack: {
+    width: 44,
+    height: 64,
+    borderRadius: 6,
+    padding: 2,
+    borderWidth: 1.5,
+  },
+  miniCardBackInner: {
+    flex: 1,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniCardBackSymbol: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  skinNameText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  equippedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#e11d48',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  equippedBadgeText: {
+    color: '#ffffff',
+    fontSize: 8,
+    fontWeight: '900',
+  },
+  unlockedSkinBtn: {
+    backgroundColor: '#262626',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  unlockedSkinBtnText: {
+    color: '#e5e5e5',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  buySkinBtn: {
+    backgroundColor: '#d97706',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  buySkinBtnText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '900',
   },
 
   /* GRAPHIQUE DU SOLDE */
