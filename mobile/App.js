@@ -29,7 +29,9 @@ import {
   Layers,
   Zap,
   Repeat,
-  Maximize2
+  Maximize2,
+  ShieldAlert,
+  BarChart2
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -59,6 +61,66 @@ function CasinoChip({ value, onPress }) {
   );
 }
 
+// 3D Animated Card Component (Card Flip 180° rotateY)
+function AnimatedPlayingCard({ card, compact = false }) {
+  const flipAnim = useRef(new Animated.Value(card.faceUp ? 1 : 0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(flipAnim, {
+      toValue: card.faceUp ? 1 : 0,
+      duration: 350,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [card.faceUp]);
+
+  const frontInterpolate = flipAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['180deg', '0deg'],
+  });
+
+  const backInterpolate = flipAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const cardStyle = compact ? styles.cardFrontCompact : styles.cardFront;
+  const backStyle = compact ? styles.cardBackCompact : styles.cardBack;
+
+  return (
+    <View style={compact ? styles.cardWrapperCompact : styles.cardWrapper}>
+      {/* FACE ARRIÈRE (DOS DE CARTE RED) */}
+      <Animated.View
+        style={[
+          backStyle,
+          styles.cardAnimatedSide,
+          { transform: [{ rotateY: backInterpolate }] },
+        ]}
+      >
+        <View style={styles.cardBackInner}>
+          <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>♠</Text>
+        </View>
+      </Animated.View>
+
+      {/* FACE AVANT (VALEUR ET ENSEIGNE) */}
+      <Animated.View
+        style={[
+          cardStyle,
+          styles.cardAnimatedSide,
+          { transform: [{ rotateY: frontInterpolate }] },
+        ]}
+      >
+        <Text style={card.isRed ? (compact ? styles.cardRankRedSmall : styles.cardRankRed) : (compact ? styles.cardRankBlackSmall : styles.cardRankBlack)}>
+          {card.rank}
+        </Text>
+        <Text style={card.isRed ? (compact ? styles.cardSuitRedSmall : styles.cardSuitRed) : (compact ? styles.cardSuitBlackSmall : styles.cardSuitBlack)}>
+          {card.suit}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('HOME'); // 'HOME' | 'GAME' | 'PROFILE'
   const [profileSubSection, setProfileSubSection] = useState(null); // 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'SETTINGS' | 'LEARN'
@@ -71,13 +133,13 @@ function App() {
   const [game, setGame] = useState(null);
   const [gameResult, setGameResult] = useState(null);
   const [isDealing, setIsDealing] = useState(false);
+  const [hasInsurance, setHasInsurance] = useState(false);
 
   // Shoe / Pioche state (6 decks = 312 cards)
   const [cardsRemaining, setCardsRemaining] = useState(312);
 
-  // Animations
-  const cardOpacity = useRef(new Animated.Value(1)).current;
-  const cardTranslateY = useRef(new Animated.Value(0)).current;
+  // Solde history tracking for progression chart
+  const [balanceHistory, setBalanceHistory] = useState([100, 110, 100, 120, 110, 130, 125, 140, 100]);
 
   // Leave confirmation modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -109,43 +171,6 @@ function App() {
       aces -= 1;
     }
     return score;
-  };
-
-  // Card entrance animation
-  const animateDeal = () => {
-    cardOpacity.setValue(0);
-    cardTranslateY.setValue(-25);
-    Animated.parallel([
-      Animated.timing(cardOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardTranslateY, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.back(1.1)),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  // Card clear animation
-  const animateClearCards = (callback) => {
-    Animated.parallel([
-      Animated.timing(cardOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardTranslateY, {
-        toValue: 30,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (callback) callback();
-    });
   };
 
   // Chip handlers
@@ -182,6 +207,7 @@ function App() {
   // Claim Failsafe 100 Credits
   const handleClaimFailsafe = () => {
     setCredits(100);
+    setBalanceHistory(prev => [...prev, 100]);
   };
 
   // Confirm leave table action
@@ -192,37 +218,37 @@ function App() {
       setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: game.bet, payout: -game.bet, score: 'ABANDON', date: 'À l\'instant' }, ...prev]);
     }
     
-    animateClearCards(() => {
-      setGame(null);
-      setGameResult(null);
-      setIsDealing(false);
-      setBetChips([]);
-      setCurrentBet(10);
-      setActiveTab('HOME');
-    });
+    setGame(null);
+    setGameResult(null);
+    setIsDealing(false);
+    setHasInsurance(false);
+    setBetChips([]);
+    setCurrentBet(10);
+    setActiveTab('HOME');
   };
 
   // ==============================================================
-  // GAME ENGINE - SEQUENTIAL STEP-BY-STEP CARD DEALING
+  // GAME ENGINE - SEQUENTIAL DEALING (PLAYER 1 -> DEALER 1 -> PLAYER 2 -> DEALER 2 FACE DOWN)
   // ==============================================================
   const handleStartGame = () => {
     if (currentBet <= 0 || currentBet > credits || isDealing) return;
     
     setIsDealing(true);
     setGameResult(null);
+    setHasInsurance(false);
     setCredits(prev => prev - currentBet);
 
-    const p1 = getRandomCard();
-    const d1 = getRandomCard();
-    const p2 = getRandomCard();
-    const d2 = getRandomCard(false);
+    const p1 = getRandomCard(true);
+    const d1 = getRandomCard(true);
+    const p2 = getRandomCard(true);
+    const d2 = getRandomCard(false); // face down
 
-    // Initial setup with empty hands
+    // 1. Deal 1st card to player
     setGame({
       playerHand: [p1],
-      dealerHand: [d1],
+      dealerHand: [],
       playerScore: calcScore([p1]),
-      dealerScore: calcScore([d1]),
+      dealerScore: 0,
       status: 'PLAYING',
       bet: currentBet,
       isSplit: false,
@@ -230,36 +256,52 @@ function App() {
       splitScores: [],
       activeSplitIndex: 0,
     });
-    animateDeal();
 
-    // Step 2: Deal 2nd card to player after 400ms delay
+    // 2. Deal 1st card to dealer after 350ms
     setTimeout(() => {
       setGame(prev => ({
         ...prev,
-        playerHand: [p1, p2],
-        playerScore: calcScore([p1, p2]),
+        dealerHand: [d1],
+        dealerScore: calcScore([d1]),
       }));
-      animateDeal();
 
-      // Step 3: Deal face-down 2nd card to dealer after another 400ms
+      // 3. Deal 2nd card to player after 350ms
       setTimeout(() => {
         setGame(prev => ({
           ...prev,
-          dealerHand: [d1, d2],
+          playerHand: [p1, p2],
+          playerScore: calcScore([p1, p2]),
         }));
-        setCardsRemaining(prev => Math.max(10, prev - 4));
-        setIsDealing(false);
-      }, 400);
 
-    }, 400);
+        // 4. Deal 2nd face-down card to dealer after 350ms
+        setTimeout(() => {
+          setGame(prev => ({
+            ...prev,
+            dealerHand: [d1, d2],
+          }));
+          setCardsRemaining(prev => Math.max(10, prev - 4));
+          setIsDealing(false);
+        }, 350);
+
+      }, 350);
+
+    }, 350);
   };
 
-  // Hit Action (One card with animation)
+  // Take Insurance (Assurance)
+  const handleTakeInsurance = () => {
+    if (!game || game.status !== 'PLAYING' || hasInsurance || credits < game.bet / 2) return;
+    const insuranceCost = Math.floor(game.bet / 2);
+    setCredits(prev => prev - insuranceCost);
+    setHasInsurance(true);
+  };
+
+  // Hit Action
   const handleHit = () => {
     if (!game || game.status !== 'PLAYING' || isDealing) return;
 
     setIsDealing(true);
-    const newCard = getRandomCard();
+    const newCard = getRandomCard(true);
     setCardsRemaining(prev => Math.max(10, prev - 1));
 
     if (game.isSplit) {
@@ -278,7 +320,6 @@ function App() {
         splitHands: newSplitHands,
         splitScores: newSplitScores,
       });
-      animateDeal();
 
       setTimeout(() => {
         setIsDealing(false);
@@ -289,7 +330,7 @@ function App() {
             finishSplitGame(newSplitHands, newSplitScores);
           }
         }
-      }, 400);
+      }, 350);
     } else {
       const updatedHand = [...game.playerHand, newCard];
       const score = calcScore(updatedHand);
@@ -299,7 +340,6 @@ function App() {
         playerHand: updatedHand,
         playerScore: score,
       });
-      animateDeal();
 
       setTimeout(() => {
         setIsDealing(false);
@@ -307,8 +347,9 @@ function App() {
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult('BUST - PERDU !');
           setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: game.bet, payout: -game.bet, score: `BUST (${score})`, date: 'À l\'instant' }, ...prev]);
+          setBalanceHistory(prev => [...prev, credits]);
         }
-      }, 400);
+      }, 350);
     }
   };
 
@@ -321,7 +362,7 @@ function App() {
     const totalBet = game.bet * 2;
     setCredits(prev => prev - additionalBet);
 
-    const newCard = getRandomCard();
+    const newCard = getRandomCard(true);
     setCardsRemaining(prev => Math.max(10, prev - 1));
 
     const updatedHand = [...game.playerHand, newCard];
@@ -333,7 +374,6 @@ function App() {
       playerScore: pScore,
       bet: totalBet,
     });
-    animateDeal();
 
     setTimeout(() => {
       if (pScore > 21) {
@@ -341,11 +381,11 @@ function App() {
         setGame(prev => ({ ...prev, status: 'FINISHED' }));
         setGameResult('DOUBLE BUST - PERDU !');
         setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: totalBet, payout: -totalBet, score: `BUST (${pScore})`, date: 'À l\'instant' }, ...prev]);
+        setBalanceHistory(prev => [...prev, credits - additionalBet]);
       } else {
-        // Dealer draws step by step
         executeDealerTurnStepByStep(updatedHand, pScore, totalBet);
       }
-    }, 600);
+    }, 500);
   };
 
   // Split Action
@@ -359,8 +399,8 @@ function App() {
 
     const card1 = game.playerHand[0];
     const card2 = game.playerHand[1];
-    const newCard1 = getRandomCard();
-    const newCard2 = getRandomCard();
+    const newCard1 = getRandomCard(true);
+    const newCard2 = getRandomCard(true);
 
     const hand1 = [card1, newCard1];
     const hand2 = [card2, newCard2];
@@ -373,11 +413,10 @@ function App() {
       activeSplitIndex: 0,
       bet: game.bet * 2,
     });
-    animateDeal();
 
     setTimeout(() => {
       setIsDealing(false);
-    }, 500);
+    }, 400);
   };
 
   // Stand Action
@@ -395,11 +434,11 @@ function App() {
     }
   };
 
-  // Step-by-step Dealer Turn
+  // Step-by-step Dealer Turn with 3D Flip of 2nd Card
   const executeDealerTurnStepByStep = (pHand, pScore, betAmount) => {
     setIsDealing(true);
 
-    // Reveal dealer face-down card first
+    // 3D Flip 2nd card to face up
     let updatedDealerHand = game.dealerHand.map(c => ({ ...c, faceUp: true }));
     let dScore = calcScore(updatedDealerHand);
 
@@ -408,14 +447,12 @@ function App() {
       dealerHand: updatedDealerHand,
       dealerScore: dScore,
     }));
-    animateDeal();
 
-    // Recursive dealer draw with 600ms delays
     const drawNextDealerCard = (currentHand) => {
       let score = calcScore(currentHand);
       if (score < 17) {
         setTimeout(() => {
-          const nextCard = getRandomCard();
+          const nextCard = getRandomCard(true);
           const nextHand = [...currentHand, nextCard];
           setCardsRemaining(prev => Math.max(10, prev - 1));
 
@@ -424,12 +461,10 @@ function App() {
             dealerHand: nextHand,
             dealerScore: calcScore(nextHand),
           }));
-          animateDeal();
 
           drawNextDealerCard(nextHand);
-        }, 650);
+        }, 600);
       } else {
-        // Dealer finished drawing -> evaluate outcome
         setTimeout(() => {
           let finalDScore = calcScore(currentHand);
           let result = '';
@@ -437,26 +472,39 @@ function App() {
           let type = 'LOSS';
           let payout = -betAmount;
 
+          let finalCredits = credits;
+
           if (finalDScore > 21 || pScore > finalDScore) {
             result = 'GAGNÉ !';
             type = 'WIN';
             winAmount = betAmount * 2;
             payout = +betAmount;
+            finalCredits += winAmount;
             setCredits(prev => prev + winAmount);
           } else if (pScore === finalDScore) {
             result = 'ÉGALITÉ !';
             type = 'PUSH';
             winAmount = betAmount;
             payout = 0;
+            finalCredits += winAmount;
             setCredits(prev => prev + winAmount);
           } else {
             result = 'PERDU !';
             type = 'LOSS';
           }
 
+          // Handle Insurance payout if dealer has Blackjack (21 on 2 cards)
+          if (hasInsurance && currentHand.length === 2 && finalDScore === 21) {
+            const insurancePayout = game.bet; // Insurance pays 2:1 on 0.5x bet = 1x bet
+            setCredits(prev => prev + insurancePayout);
+            finalCredits += insurancePayout;
+            result += ' (ASSURANCE PAYÉE !)';
+          }
+
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult(result);
           setHistory(prev => [{ id: Date.now(), type, bet: betAmount, payout, score: `${pScore} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
+          setBalanceHistory(prev => [...prev, finalCredits]);
           setIsDealing(false);
         }, 400);
       }
@@ -464,7 +512,7 @@ function App() {
 
     setTimeout(() => {
       drawNextDealerCard(updatedDealerHand);
-    }, 600);
+    }, 550);
   };
 
   // Finish Split Game Step-by-Step
@@ -478,13 +526,12 @@ function App() {
       dealerHand: updatedDealerHand,
       dealerScore: dScore,
     }));
-    animateDeal();
 
     const drawNextDealerCardSplit = (currentHand) => {
       let score = calcScore(currentHand);
       if (score < 17) {
         setTimeout(() => {
-          const nextCard = getRandomCard();
+          const nextCard = getRandomCard(true);
           const nextHand = [...currentHand, nextCard];
           setCardsRemaining(prev => Math.max(10, prev - 1));
 
@@ -493,10 +540,9 @@ function App() {
             dealerHand: nextHand,
             dealerScore: calcScore(nextHand),
           }));
-          animateDeal();
 
           drawNextDealerCardSplit(nextHand);
-        }, 650);
+        }, 600);
       } else {
         setTimeout(() => {
           let finalDScore = calcScore(currentHand);
@@ -516,10 +562,12 @@ function App() {
           const netProfit = totalPayout - game.bet;
           let resultBanner = netProfit > 0 ? `SPLIT GAGNÉ (+${netProfit} CR)` : netProfit === 0 ? 'SPLIT ÉGALITÉ' : 'SPLIT PERDU';
           
-          setCredits(prev => prev + totalPayout);
+          const newTotalCredits = credits + totalPayout;
+          setCredits(newTotalCredits);
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult(resultBanner);
           setHistory(prev => [{ id: Date.now(), type: netProfit >= 0 ? 'WIN' : 'LOSS', bet: game.bet, payout: netProfit, score: `H1:${splitScores[0]} H2:${splitScores[1]} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
+          setBalanceHistory(prev => [...prev, newTotalCredits]);
           setIsDealing(false);
         }, 400);
       }
@@ -527,20 +575,20 @@ function App() {
 
     setTimeout(() => {
       drawNextDealerCardSplit(updatedDealerHand);
-    }, 600);
+    }, 550);
   };
 
   // Re-deal / Clear round action
   const handleResetRound = () => {
-    animateClearCards(() => {
-      setGame(null);
-      setGameResult(null);
-      setIsDealing(false);
-    });
+    setGame(null);
+    setGameResult(null);
+    setIsDealing(false);
+    setHasInsurance(false);
   };
 
   const canDouble = game && game.status === 'PLAYING' && !game.isSplit && game.playerHand.length === 2 && credits >= game.bet && !isDealing;
   const canSplit = game && game.status === 'PLAYING' && !game.isSplit && game.playerHand.length === 2 && (game.playerHand[0].val === game.playerHand[1].val) && credits >= game.bet && !isDealing;
+  const canInsurance = game && game.status === 'PLAYING' && game.dealerHand.length >= 1 && game.dealerHand[0].rank === 'A' && !hasInsurance && credits >= Math.floor(game.bet / 2) && !isDealing;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -616,24 +664,32 @@ function App() {
           </ScrollView>
         )}
 
-        {/* TAB 2: TABLE DE JEU - DESIGN NOIR OFFSUIT ORIGINAL */}
+        {/* TAB 2: TABLE DE JEU - DESIGN NOIR OFFSUIT AVEC PIOCHE DE LA TAILLE DES CARTES */}
         {activeTab === 'GAME' && (
           <View style={styles.gameContainer}>
             <View style={styles.tableFrame}>
               <View style={styles.tableInnerFelt}>
 
-                {/* VISUEL PIOCHE / SABOT COMPLET (3D MULTI-LAYER DECK SHOE) */}
-                <View style={styles.fullShoeContainer}>
-                  <View style={styles.shoeStack3} />
-                  <View style={styles.shoeStack2} />
-                  <View style={styles.shoeStack1} />
-                  <View style={styles.shoeMainBox}>
-                    <Layers size={14} color="#a3a3a3" />
-                    <Text style={styles.shoeText}>{cardsRemaining} cartes</Text>
+                {/* PIOCHE DE CARTE: MÊME TAILLE QUE LES CARTES DU JEU (58x84) ET SOUS LE DÉCOMPTE */}
+                <View style={styles.shoeFullContainer}>
+                  <View style={styles.shoeCountBadge}>
+                    <Layers size={11} color="#a3a3a3" />
+                    <Text style={styles.shoeCountText}>{cardsRemaining} CARTES</Text>
+                  </View>
+                  
+                  {/* EMPILEMENT DE DOS DE CARTES MÊME FORMAT (58x84) */}
+                  <View style={styles.shoeStackWrapper}>
+                    <View style={styles.shoeCardBack3} />
+                    <View style={styles.shoeCardBack2} />
+                    <View style={styles.shoeCardBack1}>
+                      <View style={styles.cardBackInner}>
+                        <Text style={styles.cardBackSymbol}>♠</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
                 
-                {/* FILIGRANE TABLE ORIGINAL */}
+                {/* FILIGRANE TABLE */}
                 <View style={styles.tableCenterMarking}>
                   <Text style={styles.tableArcText}>BLACKJACK PAYS 3 TO 2</Text>
                 </View>
@@ -649,28 +705,17 @@ function App() {
                     )}
                   </View>
 
-                  <Animated.View style={[styles.cardsRow, { opacity: cardOpacity, transform: [{ translateY: cardTranslateY }] }]}>
-                    {game ? (
+                  <View style={styles.cardsRow}>
+                    {game && game.dealerHand.length > 0 ? (
                       game.dealerHand.map((card, idx) => (
-                        <View key={card.id || idx} style={card.faceUp ? styles.cardFront : styles.cardBack}>
-                          {card.faceUp ? (
-                            <>
-                              <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
-                              <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
-                            </>
-                          ) : (
-                            <View style={styles.cardBackInner}>
-                              <Text style={styles.cardBackSymbol}>♠</Text>
-                            </View>
-                          )}
-                        </View>
+                        <AnimatedPlayingCard key={card.id || idx} card={card} />
                       ))
                     ) : (
                       <View style={styles.emptyCardSlot}>
                         <Text style={styles.emptySlotText}>ATTENTE DE MANCHE</Text>
                       </View>
                     )}
-                  </Animated.View>
+                  </View>
                 </View>
 
                 {/* BANNIÈRE RÉSULTAT */}
@@ -691,7 +736,7 @@ function App() {
                     )}
                   </View>
 
-                  <Animated.View style={[styles.cardsRow, { opacity: cardOpacity, transform: [{ translateY: cardTranslateY }] }]}>
+                  <View style={styles.cardsRow}>
                     {game ? (
                       game.isSplit ? (
                         <View style={styles.splitHandsContainer}>
@@ -708,10 +753,7 @@ function App() {
                               </View>
                               <View style={styles.cardsRowCompact}>
                                 {hand.map((card, cIdx) => (
-                                  <View key={card.id || cIdx} style={styles.cardFrontCompact}>
-                                    <Text style={card.isRed ? styles.cardRankRedSmall : styles.cardRankBlackSmall}>{card.rank}</Text>
-                                    <Text style={card.isRed ? styles.cardSuitRedSmall : styles.cardSuitBlackSmall}>{card.suit}</Text>
-                                  </View>
+                                  <AnimatedPlayingCard key={card.id || cIdx} card={card} compact={true} />
                                 ))}
                               </View>
                             </View>
@@ -719,10 +761,7 @@ function App() {
                         </View>
                       ) : (
                         game.playerHand.map((card, idx) => (
-                          <View key={card.id || idx} style={styles.cardFront}>
-                            <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
-                            <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
-                          </View>
+                          <AnimatedPlayingCard key={card.id || idx} card={card} />
                         ))
                       )
                     ) : (
@@ -730,7 +769,7 @@ function App() {
                         <Text style={styles.emptySlotText}>PLACEZ VOS JETONS</Text>
                       </View>
                     )}
-                  </Animated.View>
+                  </View>
                 </View>
 
               </View>
@@ -739,28 +778,40 @@ function App() {
             {/* CONTROLES DE MANCHE */}
             <View style={styles.gameControlsPanel}>
               {game && game.status === 'PLAYING' ? (
-                <View style={styles.actionRow}>
-                  {canSplit && (
-                    <TouchableOpacity style={styles.splitBtn} onPress={handleSplit} disabled={isDealing}>
-                      <Repeat size={14} color="#ffffff" />
-                      <Text style={styles.actionBtnText}>SPLIT</Text>
+                <View style={styles.actionRowContainer}>
+
+                  {/* BOUTON ASSURANCE SI CROUPIER MONTRE UN AS */}
+                  {canInsurance && (
+                    <TouchableOpacity style={styles.insuranceBtn} onPress={handleTakeInsurance}>
+                      <ShieldAlert size={14} color="#ffffff" />
+                      <Text style={styles.actionBtnText}>ASSURANCE ({Math.floor(game.bet / 2)} CR)</Text>
                     </TouchableOpacity>
                   )}
 
-                  {canDouble && (
-                    <TouchableOpacity style={styles.doubleBtn} onPress={handleDouble} disabled={isDealing}>
-                      <Zap size={14} color="#ffffff" />
-                      <Text style={styles.actionBtnText}>DOUBLE</Text>
+                  <View style={styles.actionRow}>
+                    {canSplit && (
+                      <TouchableOpacity style={styles.splitBtn} onPress={handleSplit} disabled={isDealing}>
+                        <Repeat size={14} color="#ffffff" />
+                        <Text style={styles.actionBtnText}>SPLIT</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {canDouble && (
+                      <TouchableOpacity style={styles.doubleBtn} onPress={handleDouble} disabled={isDealing}>
+                        <Zap size={14} color="#ffffff" />
+                        <Text style={styles.actionBtnText}>DOUBLE</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity style={[styles.hitBtn, isDealing && { opacity: 0.5 }]} onPress={handleHit} disabled={isDealing}>
+                      <Text style={styles.actionBtnText}>TIRER</Text>
                     </TouchableOpacity>
-                  )}
 
-                  <TouchableOpacity style={[styles.hitBtn, isDealing && { opacity: 0.5 }]} onPress={handleHit} disabled={isDealing}>
-                    <Text style={styles.actionBtnText}>TIRER</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity style={[styles.standBtn, isDealing && { opacity: 0.5 }]} onPress={handleStand} disabled={isDealing}>
+                      <Text style={styles.actionBtnText}>RESTER</Text>
+                    </TouchableOpacity>
+                  </View>
 
-                  <TouchableOpacity style={[styles.standBtn, isDealing && { opacity: 0.5 }]} onPress={handleStand} disabled={isDealing}>
-                    <Text style={styles.actionBtnText}>RESTER</Text>
-                  </TouchableOpacity>
                 </View>
               ) : game && game.status === 'FINISHED' ? (
                 /* REJOUER / NETTOYER LES CARTES */
@@ -817,7 +868,7 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL */}
+        {/* TAB 3: PROFIL - AVEC GRAPHIQUE DE SOLDE ET STATS AVANCÉES */}
         {activeTab === 'PROFILE' && (
           <ScrollView contentContainerStyle={styles.profileScroll}>
             {profileSubSection ? (
@@ -831,11 +882,30 @@ function App() {
 
                 {profileSubSection === 'STATS' && (
                   <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>STATISTIQUES DÉTAILLÉES</Text>
-                    <Text style={styles.subText}>• Total Manches : {history.length}</Text>
+                    <Text style={styles.subTitle}>STATISTIQUES AVANCÉES & PROGRESSION</Text>
+
+                    {/* GRAPHIQUE VISUEL DE PROGRESSION DU SOLDE */}
+                    <View style={styles.chartContainer}>
+                      <Text style={styles.chartTitle}>PROGRESSION DU SOLDE (RÉCENT)</Text>
+                      <View style={styles.chartBarsRow}>
+                        {balanceHistory.slice(-10).map((val, idx) => {
+                          const maxVal = Math.max(...balanceHistory, 150);
+                          const barHeight = Math.min(100, Math.max(15, (val / maxVal) * 80));
+                          return (
+                            <View key={idx} style={styles.chartColumn}>
+                              <Text style={styles.chartBarValue}>{val}</Text>
+                              <View style={[styles.chartBar, { height: barHeight, backgroundColor: val >= 100 ? '#16a34a' : '#dc2626' }]} />
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    <Text style={styles.subText}>• Total Manches Jouées : {history.length}</Text>
                     <Text style={styles.subText}>• Victoires : {history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
-                    <Text style={styles.subText}>• Taux de Victoire : 60%</Text>
-                    <Text style={styles.subText}>• Blackjacks : 1</Text>
+                    <Text style={styles.subText}>• Efficacité au Double : 75%</Text>
+                    <Text style={styles.subText}>• Efficacité au Split : 66%</Text>
+                    <Text style={styles.subText}>• Taux de Victoire Global : 60%</Text>
                   </View>
                 )}
 
@@ -844,6 +914,7 @@ function App() {
                     <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
                     <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
                     <Text style={styles.subText}>• Effets sonores : Activé</Text>
+                    <Text style={styles.subText}>• Animations 3D : Activées (180° RotateY)</Text>
                     <Text style={styles.subText}>• Thème : Sombre Épuré</Text>
                   </View>
                 )}
@@ -852,17 +923,20 @@ function App() {
                   <View style={styles.subCard}>
                     <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
                     <Text style={styles.subText}>🏆 Premier Blackjack — Débloqué</Text>
-                    <Text style={styles.subText}>🏆 Série de 3 Victoires — Débloqué</Text>
+                    <Text style={styles.subText}>🏆 Double Gagnant — Débloqué</Text>
+                    <Text style={styles.subText}>🏆 Maitre du Split — Débloqué</Text>
                     <Text style={styles.subText}>🔒 High Roller (Mise 100 CR) — Verrouillé</Text>
                   </View>
                 )}
 
                 {profileSubSection === 'LEARN' && (
                   <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>RÈGLES DU BLACKJACK</Text>
+                    <Text style={styles.subTitle}>RÈGLES ET TACTIQUES</Text>
                     <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
                     <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
-                    <Text style={styles.subText}>• Les As valent 1 ou 11 au choix.</Text>
+                    <Text style={styles.subText}>• Double Down : Doubler pour 1 carte.</Text>
+                    <Text style={styles.subText}>• Split : Séparer 2 cartes identiques.</Text>
+                    <Text style={styles.subText}>• Assurance : Protégez-vous si le Croupier montre un As.</Text>
                   </View>
                 )}
               </View>
@@ -886,8 +960,8 @@ function App() {
                 <View style={styles.menuOptionsGroup}>
                   <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('STATS')}>
                     <View style={styles.optionLeft}>
-                      <TrendingUp size={18} color="#a3a3a3" />
-                      <Text style={styles.optionLabel}>Statistiques de jeu</Text>
+                      <BarChart2 size={18} color="#a3a3a3" />
+                      <Text style={styles.optionLabel}>Statistiques avancées & Graphique</Text>
                     </View>
                     <ChevronRight size={16} color="#525252" />
                   </TouchableOpacity>
@@ -1156,7 +1230,7 @@ const styles = StyleSheet.create({
   textRed: { color: '#f87171' },
   textGray: { color: '#a3a3a3' },
 
-  /* GAME STYLES - RESTAURÉ TABLE SOMBRE DE LUXE OFFSUIT */
+  /* GAME STYLES - OFFSUIT TABLE SOMBRE */
   gameContainer: {
     flex: 1,
   },
@@ -1174,70 +1248,76 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#1c1c1c',
-    backgroundColor: '#111111', // FOND NOIR / SOMBRE ORIGINAL
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
     position: 'relative',
   },
   
-  /* PIOCHE 3D STACKED SHOE */
-  fullShoeContainer: {
+  /* PIOCHE 3D FORMAT CARTES DU JEU (58x84) DIRECTEMENT SOUS LE DÉCOMPTE */
+  shoeFullContainer: {
     position: 'absolute',
-    top: 12,
+    top: 10,
     left: 12,
     zIndex: 10,
+    gap: 6,
   },
-  shoeStack3: {
-    position: 'absolute',
-    top: -6,
-    left: -6,
-    width: 60,
-    height: 30,
-    borderRadius: 6,
-    backgroundColor: '#991b1b',
-    borderWidth: 1,
-    borderColor: '#fca5a5',
-  },
-  shoeStack2: {
-    position: 'absolute',
-    top: -3,
-    left: -3,
-    width: 60,
-    height: 30,
-    borderRadius: 6,
-    backgroundColor: '#7f1d1d',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-  },
-  shoeStack1: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 60,
-    height: 30,
-    borderRadius: 6,
-    backgroundColor: '#450a0a',
-    borderWidth: 1,
-    borderColor: '#dc2626',
-  },
-  shoeMainBox: {
+  shoeCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#171717',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#404040',
-    marginTop: 6,
-    marginLeft: 6,
+    borderColor: '#262626',
   },
-  shoeText: {
+  shoeCountText: {
     color: '#e5e5e5',
     fontSize: 9,
     fontWeight: '900',
+    letterSpacing: 1,
+  },
+  shoeStackWrapper: {
+    position: 'relative',
+    width: 58,
+    height: 84,
+  },
+  shoeCardBack3: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    width: 58,
+    height: 84,
+    borderRadius: 8,
+    backgroundColor: '#991b1b',
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+  },
+  shoeCardBack2: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 58,
+    height: 84,
+    borderRadius: 8,
+    backgroundColor: '#7f1d1d',
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+  },
+  shoeCardBack1: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 58,
+    height: 84,
+    borderRadius: 8,
+    backgroundColor: '#991b1b',
+    padding: 3,
+    borderWidth: 1.5,
+    borderColor: '#e5e5e5',
   },
 
   tableCenterMarking: {
@@ -1282,6 +1362,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+
+  /* 3D FLIP CARD STYLES */
+  cardWrapper: {
+    width: 58,
+    height: 84,
+  },
+  cardWrapperCompact: {
+    width: 44,
+    height: 64,
+  },
+  cardAnimatedSide: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backfaceVisibility: 'hidden',
+  },
   cardFront: {
     width: 58,
     height: 84,
@@ -1301,6 +1397,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#e5e5e5',
   },
+  cardFrontCompact: {
+    width: 44,
+    height: 64,
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#d4d4d4',
+  },
+  cardBackCompact: {
+    width: 44,
+    height: 64,
+    backgroundColor: '#991b1b',
+    borderRadius: 6,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
   cardBackInner: {
     flex: 1,
     backgroundColor: '#7f1d1d',
@@ -1313,10 +1428,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  cardBackSymbolSmall: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
   cardRankRed: { color: '#dc2626', fontWeight: '900', fontSize: 18 },
   cardSuitRed: { color: '#dc2626', fontSize: 16 },
   cardRankBlack: { color: '#171717', fontWeight: '900', fontSize: 18 },
   cardSuitBlack: { color: '#171717', fontSize: 16 },
+  cardRankRedSmall: { color: '#dc2626', fontWeight: '900', fontSize: 14 },
+  cardSuitRedSmall: { color: '#dc2626', fontSize: 12 },
+  cardRankBlackSmall: { color: '#171717', fontWeight: '900', fontSize: 14 },
+  cardSuitBlackSmall: { color: '#171717', fontSize: 12 },
+
   emptyCardSlot: {
     width: 120,
     height: 84,
@@ -1368,20 +1493,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
   },
-  cardFrontCompact: {
-    width: 44,
-    height: 64,
-    backgroundColor: '#ffffff',
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#d4d4d4',
-  },
-  cardRankRedSmall: { color: '#dc2626', fontWeight: '900', fontSize: 14 },
-  cardSuitRedSmall: { color: '#dc2626', fontSize: 12 },
-  cardRankBlackSmall: { color: '#171717', fontWeight: '900', fontSize: 14 },
-  cardSuitBlackSmall: { color: '#171717', fontSize: 12 },
 
   resultBanner: {
     backgroundColor: '#e11d48',
@@ -1402,9 +1513,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#1f1f1f',
   },
+  actionRowContainer: {
+    gap: 8,
+  },
   actionRow: {
     flexDirection: 'row',
     gap: 8,
+  },
+  insuranceBtn: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#60a5fa',
   },
   hitBtn: {
     flex: 1,
@@ -1551,7 +1676,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* PROFILE STYLES */
+  /* PROFILE STYLES - GRAPHIQUE ET STATS AVANCÉES */
   profileScroll: {
     padding: 16,
   },
@@ -1635,7 +1760,7 @@ const styles = StyleSheet.create({
     borderColor: '#262626',
     borderRadius: 16,
     padding: 16,
-    gap: 10,
+    gap: 12,
   },
   subTitle: {
     color: '#ffffff',
@@ -1648,6 +1773,44 @@ const styles = StyleSheet.create({
     color: '#a3a3a3',
     fontSize: 13,
     fontWeight: '600',
+  },
+
+  /* GRAPHIQUE DU SOLDE */
+  chartContainer: {
+    backgroundColor: '#171717',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#262626',
+    gap: 10,
+    marginVertical: 4,
+  },
+  chartTitle: {
+    color: '#737373',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  chartBarsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 100,
+    paddingTop: 10,
+  },
+  chartColumn: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
+  },
+  chartBarValue: {
+    color: '#a3a3a3',
+    fontSize: 8,
+    fontWeight: '800',
+  },
+  chartBar: {
+    width: 14,
+    borderRadius: 4,
   },
 
   /* BOTTOM TAB BAR */
