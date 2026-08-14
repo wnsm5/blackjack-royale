@@ -12,7 +12,6 @@ import {
   Modal,
   Animated,
   Easing,
-  useWindowDimensions,
   PanResponder,
 } from 'react-native';
 import {
@@ -294,25 +293,48 @@ function App() {
     highestLoss: -50,
   });
 
-  // Screen dimensions for paging scroll
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const tabScrollRef = useRef(null);
-
-  // Page Transition Animations (subSectionSlideAnim still used for profile sub-section slide)
+  // Animations
   const subSectionSlideAnim = useRef(new Animated.Value(250)).current;
+  const tabFadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Ref so PanResponder can call closeSubSection without stale closure
+  // Refs to avoid stale closures inside PanResponders
   const closeSubSectionRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
+  const profileSubSectionRef = useRef(profileSubSection);
+  const changeTabRef = useRef(null);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { profileSubSectionRef.current = profileSubSection; }, [profileSubSection]);
 
-  // PanResponder: swipe right inside a profile sub-section to close it (goes back to profile menu)
+  // PanResponder: swipe right inside a profile sub-section to close it
   const swipeSubSectionPanResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
         gs.dx > 25 && Math.abs(gs.dy) < 80 && gs.dx > Math.abs(gs.dy) * 1.5,
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx > 60) {
-          closeSubSectionRef.current && closeSubSectionRef.current();
-        }
+        if (gs.dx > 60) closeSubSectionRef.current && closeSubSectionRef.current();
+      },
+    })
+  ).current;
+
+  // PanResponder: swipe left/right on HOME or PROFILE to switch tab
+  // Uses CAPTURE phase so it activates before inner ScrollViews,
+  // but only for clearly horizontal gestures (angle < ~22° from horizontal)
+  const swipeTabPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_, gs) => {
+        if (activeTabRef.current === 'GAME') return false;
+        if (profileSubSectionRef.current !== null) return false;
+        // Only capture if gesture is clearly horizontal (dx dominates dy by 3:1)
+        return Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 3;
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (Math.abs(gs.dx) < 50) return;
+        const tab = activeTabRef.current;
+        if (gs.dx < -50 && tab === 'HOME') changeTabRef.current && changeTabRef.current('PROFILE');
+        else if (gs.dx > 50 && tab === 'PROFILE') changeTabRef.current && changeTabRef.current('HOME');
       },
     })
   ).current;
@@ -348,28 +370,23 @@ function App() {
 
   const activeCardSkin = cardBackSkins.find(s => s.id === equippedCardBackId) || cardBackSkins[0];
 
-  // Handle Tab Change — scrolls the horizontal paging ScrollView to the right page
+  // Handle Tab Change — simple state update with fade
   const changeTab = (newTab) => {
     if (newTab === activeTab) return;
-    if (newTab === 'GAME') {
-      setActiveTab('GAME');
+    Animated.timing(tabFadeAnim, {
+      toValue: 0, duration: 100, useNativeDriver: true,
+    }).start(() => {
+      setActiveTab(newTab);
       setProfileSubSection(null);
-      return;
-    }
-    const pageIdx = newTab === 'HOME' ? 0 : 1;
-    tabScrollRef.current?.scrollTo({ x: pageIdx * screenWidth, animated: true });
-    setActiveTab(newTab);
-    setProfileSubSection(null);
+      Animated.timing(tabFadeAnim, {
+        toValue: 1, duration: 180, useNativeDriver: true,
+      }).start();
+    });
   };
 
-  // Sync paging scroll position whenever activeTab changes (e.g. returning from GAME)
-  useEffect(() => {
-    if (activeTab === 'HOME') {
-      tabScrollRef.current?.scrollTo({ x: 0, animated: false });
-    } else if (activeTab === 'PROFILE') {
-      tabScrollRef.current?.scrollTo({ x: screenWidth, animated: false });
-    }
-  }, [activeTab, screenWidth]);
+  // Keep refs current (avoid stale closures in PanResponders)
+  closeSubSectionRef.current = closeSubSection;
+  changeTabRef.current = changeTab;
 
   // Handle Opening Sub-Section with Slide Up Animation
   const openSubSection = (section) => {
@@ -395,18 +412,8 @@ function App() {
     });
   };
 
-  // Keep closeSubSection accessible from PanResponder (avoids stale closure)
+  // Keep closeSubSection ref current
   closeSubSectionRef.current = closeSubSection;
-
-  // Called when user swipes between pages manually on the paging ScrollView
-  const handleTabScrollEnd = (e) => {
-    const pageIdx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-    const newTab = pageIdx === 0 ? 'HOME' : 'PROFILE';
-    if (newTab !== activeTab) {
-      setActiveTab(newTab);
-      setProfileSubSection(null);
-    }
-  };
 
   // Helper card generator
   const getRandomCard = (faceUp = true) => {
@@ -1122,26 +1129,19 @@ function App() {
         </View>
       )}
 
-      {/* PAGING SCROLL: HOME (page 0) + PROFILE (page 1) — swipe natif gauche/droite */}
+      {/* CONTENU PRINCIPAL (HOME + PROFILE): rendu conditionnel + swipe via PanResponder capture */}
       {activeTab !== 'GAME' && (
-        <ScrollView
-          ref={tabScrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={profileSubSection === null}
-          onMomentumScrollEnd={handleTabScrollEnd}
-          style={styles.mainContent}
-          bounces={false}
+        <Animated.View
+          style={[styles.mainContent, { opacity: tabFadeAnim }]}
+          {...swipeTabPanResponder.panHandlers}
         >
 
-          {/* PAGE 0: ACCUEIL */}
-          <View style={{ width: screenWidth, height: screenHeight }}>
-            <ScrollView contentContainerStyle={styles.homeScroll}>
+          {/* TAB HOME */}
+          {activeTab === 'HOME' && (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.homeScroll}>
               <View style={styles.homeHeroCard}>
                 <Text style={styles.heroLabel}>SOLDE DISPONIBLE</Text>
                 <Text style={styles.heroCredits}>{credits} CR</Text>
-
                 {credits === 0 ? (
                   <TouchableOpacity style={styles.failsafeBtn} onPress={handleClaimFailsafe}>
                     <LifeBuoy size={20} color="#ffffff" />
@@ -1156,23 +1156,28 @@ function App() {
               </View>
 
               <View style={styles.historySection}>
-                <Text style={styles.sectionTitle}>DERNIÈRES PARTIES</Text>
-                {history.map((item) => (
+                <Text style={styles.sectionTitle}>DERNIÈRES PARTIES (10)</Text>
+                {history.slice(0, 10).map((item) => (
                   <View
                     key={item.id}
                     style={[
                       styles.historyRow,
-                      item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin : item.type === 'PUSH' ? styles.historyRowPush : styles.historyRowLoss
+                      item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin
+                        : item.type === 'PUSH' ? styles.historyRowPush
+                        : styles.historyRowLoss
                     ]}
                   >
                     <View style={styles.historyLeft}>
-                      <Text style={[styles.historyTypeBadge, item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
+                      <Text style={[styles.historyTypeBadge,
+                        item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen
+                          : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
                         {item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU'}
                       </Text>
                       <Text style={styles.historyScoreText}>{item.score}</Text>
                     </View>
                     <View style={styles.historyRight}>
-                      <Text style={[styles.historyAmountText, item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
+                      <Text style={[styles.historyAmountText,
+                        item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
                         {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
                       </Text>
                       <Text style={styles.historyDateText}>{item.date}</Text>
@@ -1181,40 +1186,36 @@ function App() {
                 ))}
               </View>
             </ScrollView>
-          </View>
+          )}
 
-          {/* PAGE 1: PROFIL */}
-          <View style={{ width: screenWidth, height: screenHeight, backgroundColor: '#000000' }}>
-            {profileSubSection && (
-              <View style={styles.stickySubHeaderBar}>
-                <TouchableOpacity 
-                  style={styles.stickyBackBtnIconOnly} 
-                  onPress={closeSubSection}
-                  activeOpacity={0.7}
-                >
-                  <ChevronLeft size={22} color="#ffffff" />
-                </TouchableOpacity>
+          {/* TAB PROFILE */}
+          {activeTab === 'PROFILE' && (
+            <View style={{ flex: 1, backgroundColor: '#000000' }}>
+              {profileSubSection && (
+                <View style={styles.stickySubHeaderBar}>
+                  <TouchableOpacity
+                    style={styles.stickyBackBtnIconOnly}
+                    onPress={closeSubSection}
+                    activeOpacity={0.7}
+                  >
+                    <ChevronLeft size={22} color="#ffffff" />
+                  </TouchableOpacity>
+                  {profileSubSection === 'CARDBACKS' && (
+                    <View style={styles.equippedMiniCardHeaderRight}>
+                      <CardBackVisual skin={activeCardSkin} width={24} height={34} />
+                    </View>
+                  )}
+                </View>
+              )}
 
-                {profileSubSection === 'CARDBACKS' && (
-                  <View style={styles.equippedMiniCardHeaderRight}>
-                    <CardBackVisual skin={activeCardSkin} width={24} height={34} />
-                  </View>
-                )}
-              </View>
-            )}
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.profileScroll}>
+                {profileSubSection ? (
+                  <Animated.View
+                    style={[styles.subSectionContainer, { transform: [{ translateY: subSectionSlideAnim }] }]}
+                    {...swipeSubSectionPanResponder.panHandlers}
+                  >
 
-            <ScrollView contentContainerStyle={styles.profileScroll}>
-              {profileSubSection ? (
-                /* SOUS-SECTIONS AVEC ANIMATION DE GLISSEMENT VERTICAL (SLIDE UP / SLIDE DOWN) + SWIPE DROITE POUR FERMER */
-                <Animated.View 
-                  style={[
-                    styles.subSectionContainer, 
-                    { transform: [{ translateY: subSectionSlideAnim }] }
-                  ]}
-                  {...swipeSubSectionPanResponder.panHandlers}
-                >
-
-                  {/* 1. STATISTIQUES AVANCÉES COMPLETES */}
+                    {/* 1. STATISTIQUES AVANCÉES COMPLETES */}
                   {profileSubSection === 'STATS' && (
                     <View style={styles.subCard}>
                       <Text style={styles.subTitle}>STATISTIQUES AVANCÉES</Text>
@@ -1521,8 +1522,9 @@ function App() {
               )}
             </ScrollView>
           </View>
+        )}
 
-        </ScrollView>
+      </Animated.View>
       )}
 
       {/* BARRE EN BAS (MASQUÉE PENDANT LE JEU ET DANS TOUS LES SOUS-ONGLETS DU PROFIL) */}
