@@ -842,6 +842,26 @@ function App() {
       dealerScore: dScore,
     }));
 
+    // If all split hands busted (>21), no need for dealer to draw
+    if (splitScores.every(s => s > 21)) {
+      setTimeout(() => {
+        setGame(prev => ({ ...prev, status: 'FINISHED' }));
+        setGameResult(`DOUBLE BUST - SPLIT PERDU (-${game.bet} CR)`);
+        setFinancialRecords(prev => ({ ...prev, highestLoss: Math.min(prev.highestLoss, -game.bet) }));
+        setHistory(prev => [{
+          id: Date.now(),
+          type: 'LOSS',
+          bet: game.bet,
+          payout: -game.bet,
+          score: `M1:${splitScores[0]} M2:${splitScores[1]} (BUST)`,
+          date: 'À l\'instant'
+        }, ...prev]);
+        setBalanceHistory(prev => [...prev, credits]);
+        setIsDealing(false);
+      }, 400);
+      return;
+    }
+
     const drawNextDealerCardSplit = (currentHand) => {
       let score = calcScore(currentHand);
       if (score < 17) {
@@ -863,14 +883,19 @@ function App() {
           let finalDScore = calcScore(currentHand);
           const singleBet = game.bet / 2;
           let totalPayout = 0;
+          let handDetails = [];
 
-          splitScores.forEach((sScore) => {
-            if (sScore <= 21) {
-              if (finalDScore > 21 || sScore > finalDScore) {
-                totalPayout += singleBet * 2;
-              } else if (sScore === finalDScore) {
-                totalPayout += singleBet;
-              }
+          splitScores.forEach((sScore, idx) => {
+            if (sScore > 21) {
+              handDetails.push(`M${idx + 1}: Perdu (${sScore})`);
+            } else if (finalDScore > 21 || sScore > finalDScore) {
+              totalPayout += singleBet * 2;
+              handDetails.push(`M${idx + 1}: Gagné (${sScore})`);
+            } else if (sScore === finalDScore) {
+              totalPayout += singleBet;
+              handDetails.push(`M${idx + 1}: Égalité (${sScore})`);
+            } else {
+              handDetails.push(`M${idx + 1}: Perdu (${sScore})`);
             }
           });
 
@@ -881,13 +906,27 @@ function App() {
             setFinancialRecords(prev => ({ ...prev, highestLoss: Math.min(prev.highestLoss, netProfit) }));
           }
 
-          let resultBanner = netProfit > 0 ? `SPLIT GAGNÉ (+${netProfit} CR)` : netProfit === 0 ? 'SPLIT ÉGALITÉ' : 'SPLIT PERDU';
-          
+          let resultBanner = '';
+          if (netProfit > 0) {
+            resultBanner = `SPLIT GAGNÉ (+${netProfit} CR) • ${handDetails.join(' | ')}`;
+          } else if (netProfit === 0) {
+            resultBanner = `BILAN NEUTRE (0 CR NET) • ${handDetails.join(' | ')}`;
+          } else {
+            resultBanner = `SPLIT PERDU (${netProfit} CR) • ${handDetails.join(' | ')}`;
+          }
+
           const newTotalCredits = credits + totalPayout;
           setCredits(newTotalCredits);
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult(resultBanner);
-          setHistory(prev => [{ id: Date.now(), type: netProfit >= 0 ? 'WIN' : 'LOSS', bet: game.bet, payout: netProfit, score: `H1:${splitScores[0]} H2:${splitScores[1]} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
+          setHistory(prev => [{
+            id: Date.now(),
+            type: netProfit > 0 ? 'WIN' : netProfit === 0 ? 'PUSH' : 'LOSS',
+            bet: game.bet,
+            payout: netProfit,
+            score: `M1:${splitScores[0]} M2:${splitScores[1]} vs ${finalDScore}`,
+            date: 'À l\'instant'
+          }, ...prev]);
           setBalanceHistory(prev => [...prev, newTotalCredits]);
           setIsDealing(false);
         }, 400);
@@ -1037,7 +1076,14 @@ function App() {
                               ]}
                             >
                               <View style={styles.splitHandBadge}>
-                                <Text style={styles.splitHandBadgeText}>MAIN {hIdx + 1} ({game.splitScores[hIdx]})</Text>
+                                <Text style={styles.splitHandBadgeText}>
+                                  MAIN {hIdx + 1} ({game.splitScores[hIdx]})
+                                  {game.status === 'FINISHED' && (
+                                    game.splitScores[hIdx] > 21 ? ' • BUST' :
+                                    (game.dealerScore > 21 || game.splitScores[hIdx] > game.dealerScore) ? ' • GAGNÉ' :
+                                    game.splitScores[hIdx] === game.dealerScore ? ' • ÉGALITÉ' : ' • PERDU'
+                                  )}
+                                </Text>
                               </View>
                               <View style={styles.cardsRowCompact}>
                                 {hand.map((card, cIdx) => (
