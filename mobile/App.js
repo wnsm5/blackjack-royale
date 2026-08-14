@@ -41,19 +41,89 @@ import {
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
-// 10 DOS DE CARTES PERSONNALISÉS (CARD BACK SKINS)
+// 10 DOS DE CARTES DE LUXE SANS EMOJI (AUTHENTIC CASINO DESIGNS)
 const INITIAL_CARD_BACKS = [
-  { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#e5e5e5', symbol: '♠', price: 0, unlocked: true },
-  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', symbol: '♠', price: 50, unlocked: true },
-  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', symbol: '👑', price: 100, unlocked: false },
-  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', symbol: '♠', price: 100, unlocked: false },
-  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', symbol: '💎', price: 150, unlocked: false },
-  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', symbol: '⚡', price: 150, unlocked: false },
-  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', symbol: '🔮', price: 200, unlocked: false },
-  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', symbol: '🏆', price: 250, unlocked: false },
-  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', symbol: '🛡️', price: 250, unlocked: false },
-  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', symbol: '🌐', price: 300, unlocked: false },
+  { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#fca5a5', price: 0, unlocked: true },
+  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', price: 50, unlocked: true },
+  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', price: 100, unlocked: true },
+  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', price: 100, unlocked: true },
+  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', price: 150, unlocked: true },
+  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', price: 150, unlocked: true },
+  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', price: 200, unlocked: true },
+  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', price: 250, unlocked: true },
+  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', price: 250, unlocked: true },
+  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', price: 300, unlocked: true },
 ];
+
+// Visual Pattern Component for Card Backs (No emojis, authentic casino geometry)
+function CardBackVisual({ skin, width = 58, height = 84 }) {
+  const cornerRadius = Math.round(width * 0.14);
+  const borderThickness = Math.max(1.5, Math.round(width * 0.035));
+
+  return (
+    <View
+      style={{
+        width,
+        height,
+        borderRadius: cornerRadius,
+        backgroundColor: skin.bg,
+        borderWidth: borderThickness,
+        borderColor: skin.border,
+        padding: Math.max(2, Math.round(width * 0.04)),
+        overflow: 'hidden',
+      }}
+    >
+      <View
+        style={{
+          flex: 1,
+          borderRadius: cornerRadius - 2,
+          backgroundColor: skin.innerBg,
+          borderWidth: 1,
+          borderColor: skin.border,
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
+        {/* Diamond Lattice Filigree */}
+        <View
+          style={{
+            position: 'absolute',
+            width: '82%',
+            height: '82%',
+            borderRadius: cornerRadius - 4,
+            borderWidth: 1,
+            borderColor: skin.border,
+            borderStyle: 'dashed',
+            opacity: 0.6,
+          }}
+        />
+        {/* Center Luxury Emblem */}
+        <View
+          style={{
+            width: '46%',
+            height: '46%',
+            borderRadius: Math.round(width * 0.23),
+            borderWidth: 1.5,
+            borderColor: skin.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: skin.bg,
+          }}
+        >
+          <View
+            style={{
+              width: '44%',
+              height: '44%',
+              borderRadius: Math.round(width * 0.11),
+              backgroundColor: skin.border,
+            }}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 // Custom sleek Casino Chip component
 function CasinoChip({ value, onPress, size = 36 }) {
@@ -115,6 +185,8 @@ function AnimatedPlayingCard({ card, compact = false, index = 0, cardSkin = INIT
   const wrapperStyle = compact ? styles.cardWrapperCompact : styles.cardWrapper;
   
   const overlapMargin = index > 0 ? (compact ? -20 : -26) : 0;
+  const width = compact ? 44 : 58;
+  const height = compact ? 64 : 84;
 
   return (
     <Animated.View
@@ -137,11 +209,7 @@ function AnimatedPlayingCard({ card, compact = false, index = 0, cardSkin = INIT
           </Text>
         </View>
       ) : (
-        <View style={[compact ? styles.cardBackCompact : styles.cardBack, { backgroundColor: cardSkin.bg, borderColor: cardSkin.border }]}>
-          <View style={[styles.cardBackInner, { backgroundColor: cardSkin.innerBg }]}>
-            <Text style={compact ? styles.cardBackSymbolSmall : styles.cardBackSymbol}>{cardSkin.symbol}</Text>
-          </View>
-        </View>
+        <CardBackVisual skin={cardSkin} width={width} height={height} />
       )}
     </Animated.View>
   );
@@ -290,15 +358,9 @@ function App() {
     setBalanceHistory(prev => [...prev, 100]);
   };
 
-  // Unlock Card Back
-  const handleUnlockCardBack = (skin) => {
-    if (skin.unlocked) {
-      setEquippedCardBackId(skin.id);
-    } else if (credits >= skin.price) {
-      setCredits(prev => prev - skin.price);
-      setCardBackSkins(prev => prev.map(s => s.id === skin.id ? { ...s, unlocked: true } : s));
-      setEquippedCardBackId(skin.id);
-    }
+  // Equip / Select Card Back
+  const handleEquipCardBack = (skin) => {
+    setEquippedCardBackId(skin.id);
   };
 
   // Claim Challenge Reward
@@ -770,12 +832,14 @@ function App() {
                   </View>
                   
                   <View style={styles.shoeStackWrapper}>
-                    <View style={[styles.shoeCardBack3, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]} />
-                    <View style={[styles.shoeCardBack2, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]} />
-                    <View style={[styles.shoeCardBack1, { backgroundColor: activeCardSkin.bg, borderColor: activeCardSkin.border }]}>
-                      <View style={[styles.cardBackInner, { backgroundColor: activeCardSkin.innerBg }]}>
-                        <Text style={styles.cardBackSymbol}>{activeCardSkin.symbol}</Text>
-                      </View>
+                    <View style={{ position: 'absolute', top: -4, left: -4 }}>
+                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
+                    </View>
+                    <View style={{ position: 'absolute', top: -2, left: -2 }}>
+                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
+                    </View>
+                    <View style={{ position: 'absolute', top: 0, left: 0 }}>
+                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
                     </View>
                   </View>
                 </View>
@@ -962,7 +1026,7 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL ENRICHI (STATS, SUCCÈS, DÉFIS, DOS DE CARTES, APPRENDRE, PARAMÈTRES) */}
+        {/* TAB 3: PROFIL ENRICHI */}
         {activeTab === 'PROFILE' && (
           <ScrollView contentContainerStyle={styles.profileScroll}>
             {profileSubSection ? (
@@ -1118,46 +1182,25 @@ function App() {
                   </View>
                 )}
 
-                {/* 4. DOS DE CARTES (10 CUSTOM SKINS) */}
+                {/* 4. DOS DE CARTES (GRANDE GRILLE 2 COLONNES SANS EMOJI NI TEXTE) */}
                 {profileSubSection === 'CARDBACKS' && (
                   <View style={styles.subCard}>
-                    <Text style={styles.subTitle}>DOS DE CARTES (10 STYLES)</Text>
-                    <Text style={styles.subText}>Sélectionnez un dos de carte pour personnaliser votre table de jeu :</Text>
+                    <Text style={styles.subTitle}>DOS DE CARTES</Text>
 
-                    <View style={styles.cardSkinsGrid}>
+                    <View style={styles.cardSkinsTwoColumnGrid}>
                       {cardBackSkins.map((skin) => {
                         const isEquipped = equippedCardBackId === skin.id;
                         return (
                           <TouchableOpacity
                             key={skin.id}
                             style={[
-                              styles.skinCardItem,
-                              isEquipped && styles.skinCardItemEquipped,
+                              styles.bigSkinCardContainer,
+                              isEquipped && styles.bigSkinCardContainerEquipped,
                             ]}
-                            onPress={() => handleUnlockCardBack(skin)}
+                            onPress={() => handleEquipCardBack(skin)}
+                            activeOpacity={0.85}
                           >
-                            <View style={[styles.miniCardBack, { backgroundColor: skin.bg, borderColor: skin.border }]}>
-                              <View style={[styles.miniCardBackInner, { backgroundColor: skin.innerBg }]}>
-                                <Text style={styles.miniCardBackSymbol}>{skin.symbol}</Text>
-                              </View>
-                            </View>
-
-                            <Text style={styles.skinNameText}>{skin.name}</Text>
-
-                            {isEquipped ? (
-                              <View style={styles.equippedBadge}>
-                                <CheckCircle2 size={10} color="#ffffff" />
-                                <Text style={styles.equippedBadgeText}>ÉQUIPÉ</Text>
-                              </View>
-                            ) : skin.unlocked ? (
-                              <View style={styles.unlockedSkinBtn}>
-                                <Text style={styles.unlockedSkinBtnText}>CHOISIR</Text>
-                              </View>
-                            ) : (
-                              <View style={styles.buySkinBtn}>
-                                <Text style={styles.buySkinBtnText}>{skin.price} CR</Text>
-                              </View>
-                            )}
+                            <CardBackVisual skin={skin} width={136} height={196} />
                           </TouchableOpacity>
                         );
                       })}
@@ -1190,7 +1233,6 @@ function App() {
 
               </Animated.View>
             ) : (
-              /* MENU PROFIL PRINCIPAL ÉPURÉ & COMPLET */
               <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
                 <View style={styles.profileHeaderCard}>
                   <View style={styles.avatarCircle}>
@@ -1551,34 +1593,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 84,
   },
-  shoeCardBack3: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    width: 58,
-    height: 84,
-    borderRadius: 8,
-    borderWidth: 1.5,
-  },
-  shoeCardBack2: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    width: 58,
-    height: 84,
-    borderRadius: 8,
-    borderWidth: 1.5,
-  },
-  shoeCardBack1: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 58,
-    height: 84,
-    borderRadius: 8,
-    padding: 3,
-    borderWidth: 1.5,
-  },
 
   tableCenterMarking: {
     position: 'absolute',
@@ -1642,13 +1656,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#d4d4d4',
   },
-  cardBack: {
-    width: 58,
-    height: 84,
-    borderRadius: 8,
-    padding: 3,
-    borderWidth: 1.5,
-  },
   cardFrontCompact: {
     width: 44,
     height: 64,
@@ -1658,29 +1665,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#d4d4d4',
-  },
-  cardBackCompact: {
-    width: 44,
-    height: 64,
-    borderRadius: 6,
-    padding: 2,
-    borderWidth: 1,
-  },
-  cardBackInner: {
-    flex: 1,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBackSymbol: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  cardBackSymbolSmall: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '900',
   },
   cardRankRed: { color: '#dc2626', fontWeight: '900', fontSize: 18 },
   cardSuitRed: { color: '#dc2626', fontSize: 16 },
@@ -1925,7 +1909,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* PROFILE STYLES ENRICHIS */
+  /* PROFILE STYLES */
   profileScroll: {
     padding: 16,
   },
@@ -2205,87 +2189,30 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
 
-  /* DOS DE CARTES (10 SKINS GRID) */
-  cardSkinsGrid: {
+  /* DOS DE CARTES GRANDE GRILLE 2 COLONNES PUREMENT VISUELLE SANS EMOJI NI TEXTE */
+  cardSkinsTwoColumnGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 6,
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
   },
-  skinCardItem: {
-    width: '48%',
-    backgroundColor: '#171717',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#262626',
-    padding: 10,
-    alignItems: 'center',
-    gap: 6,
-  },
-  skinCardItemEquipped: {
-    borderColor: '#e11d48',
+  bigSkinCardContainer: {
+    borderRadius: 16,
+    padding: 3,
     borderWidth: 2,
-    backgroundColor: '#1f1416',
-  },
-  miniCardBack: {
-    width: 44,
-    height: 64,
-    borderRadius: 6,
-    padding: 2,
-    borderWidth: 1.5,
-  },
-  miniCardBackInner: {
-    flex: 1,
-    borderRadius: 4,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  miniCardBackSymbol: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  skinNameText: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  equippedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#e11d48',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  equippedBadgeText: {
-    color: '#ffffff',
-    fontSize: 8,
-    fontWeight: '900',
-  },
-  unlockedSkinBtn: {
-    backgroundColor: '#262626',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  unlockedSkinBtnText: {
-    color: '#e5e5e5',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  buySkinBtn: {
-    backgroundColor: '#d97706',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  buySkinBtnText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '900',
+  bigSkinCardContainerEquipped: {
+    borderColor: '#e11d48',
+    borderRadius: 18,
+    shadowColor: '#e11d48',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
 
   /* GRAPHIQUE DU SOLDE */
