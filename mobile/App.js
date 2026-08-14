@@ -554,12 +554,45 @@ function App() {
         }));
 
         setTimeout(() => {
-          setGame(prev => ({
-            ...prev,
-            dealerHand: [d1, d2],
-          }));
+          const pScore = calcScore([p1, p2]);
           setCardsRemaining(prev => Math.max(10, prev - 4));
-          setIsDealing(false);
+
+          // Natural Blackjack (21 on initial 2 cards deal) -> Immediate win at 3:2 (+1.5x bet)
+          if (pScore === 21) {
+            const d2Revealed = { ...d2, faceUp: true };
+            const dScore = calcScore([d1, d2Revealed]);
+            const winAmount = Math.floor(currentBet * 2.5); // returns bet + 1.5x bet
+            const netGain = Math.floor(currentBet * 1.5);   // profit is 1.5x bet
+
+            setCredits(prev => prev + winAmount);
+            setGame(prev => ({
+              ...prev,
+              dealerHand: [d1, d2Revealed],
+              dealerScore: dScore,
+              status: 'FINISHED',
+            }));
+            setGameResult('BLACKJACK ! (PAYÉ 3:2)');
+            setFinancialRecords(prev => ({
+              ...prev,
+              highestWin: Math.max(prev.highestWin, netGain),
+            }));
+            setHistory(prev => [{
+              id: Date.now(),
+              type: 'BLACKJACK',
+              bet: currentBet,
+              payout: +netGain,
+              score: `21 (BJ) vs ${dScore}`,
+              date: 'À l\'instant'
+            }, ...prev]);
+            setBalanceHistory(prev => [...prev, credits - currentBet + winAmount]);
+            setIsDealing(false);
+          } else {
+            setGame(prev => ({
+              ...prev,
+              dealerHand: [d1, d2],
+            }));
+            setIsDealing(false);
+          }
         }, 350);
 
       }, 350);
