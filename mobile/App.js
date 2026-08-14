@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
   useWindowDimensions,
+  PanResponder,
 } from 'react-native';
 import {
   ShoppingBag,
