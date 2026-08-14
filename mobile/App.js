@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#064e3b',
     alignItems: 'center',
-    justify.content: 'space-around',
+    justifyContent: 'space-around',
     padding: 20,
   },
   feltLabel: {
