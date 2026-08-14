@@ -9,14 +9,48 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+
+const RENDER_API_URL = 'https://blackjack-api-w1ej.onrender.com/api';
+const CHIP_VALUES = [1, 2, 5, 10, 20];
 
 function App() {
   const [activeTab, setActiveTab] = useState('HOME');
   const [credits, setCredits] = useState(100);
   const [currentBet, setCurrentBet] = useState(10);
   const [betChips, setBetChips] = useState([]);
+  
+  // Real Game Engine state
+  const [game, setGame] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [gameResult, setGameResult] = useState(null);
 
+  // Helper for API calls
+  const apiCall = async (endpoint, body = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${RENDER_API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur réseau');
+      }
+      return data;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add chip
   const handleAddChip = (val) => {
     const total = betChips.reduce((a, c) => a + c, 0);
     if (total + val <= credits) {
@@ -26,6 +60,7 @@ function App() {
     }
   };
 
+  // Remove chip
   const handleRemoveChip = (idx) => {
     const newChips = betChips.filter((_, i) => i !== idx);
     setBetChips(newChips);
@@ -37,20 +72,151 @@ function App() {
     setCurrentBet(0);
   };
 
+  // Game Engine Actions
+  const handleStartGame = async () => {
+    if (currentBet <= 0 || currentBet > credits) return;
+    setGameResult(null);
+    
+    // Fallback engine if backend is offline or for instant play
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+    
+    const getRandomCard = (faceUp = true) => {
+      const rank = ranks[Math.floor(Math.random() * ranks.length)];
+      const suit = suits[Math.floor(Math.random() * suits.length)];
+      const val = ['J','Q','K'].includes(rank) ? 10 : rank === 'A' ? 11 : parseInt(rank);
+      return { rank, suit, val, isRed: suit === '♥' || suit === '♦', faceUp };
+    };
+
+    const pCard1 = getRandomCard();
+    const pCard2 = getRandomCard();
+    const dCard1 = getRandomCard();
+    const dCard2 = getRandomCard(false);
+
+    const calcScore = (cards) => {
+      let score = cards.filter(c => c.faceUp).reduce((a, c) => a + c.val, 0);
+      let aces = cards.filter(c => c.faceUp && c.rank === 'A').length;
+      while (score > 21 && aces > 0) {
+        score -= 10;
+        aces -= 1;
+      }
+      return score;
+    };
+
+    const newGame = {
+      playerHand: [pCard1, pCard2],
+      dealerHand: [dCard1, dCard2],
+      playerScore: calcScore([pCard1, pCard2]),
+      dealerScore: calcScore([dCard1]),
+      status: 'PLAYING',
+      bet: currentBet,
+    };
+
+    setCredits(prev => prev - currentBet);
+    setGame(newGame);
+  };
+
+  const handleHit = () => {
+    if (!game || game.status !== 'PLAYING') return;
+    
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+    const rank = ranks[Math.floor(Math.random() * ranks.length)];
+    const suit = suits[Math.floor(Math.random() * suits.length)];
+    const val = ['J','Q','K'].includes(rank) ? 10 : rank === 'A' ? 11 : parseInt(rank);
+    const newCard = { rank, suit, val, isRed: suit === '♥' || suit === '♦', faceUp: true };
+
+    const updatedHand = [...game.playerHand, newCard];
+    
+    let score = updatedHand.reduce((a, c) => a + c.val, 0);
+    let aces = updatedHand.filter(c => c.rank === 'A').length;
+    while (score > 21 && aces > 0) {
+      score -= 10;
+      aces -= 1;
+    }
+
+    if (score > 21) {
+      setGame({
+        ...game,
+        playerHand: updatedHand,
+        playerScore: score,
+        status: 'FINISHED',
+      });
+      setGameResult('BUST - PERDU !');
+    } else {
+      setGame({
+        ...game,
+        playerHand: updatedHand,
+        playerScore: score,
+      });
+    }
+  };
+
+  const handleStand = () => {
+    if (!game || game.status !== 'PLAYING') return;
+
+    // Reveal dealer holecard
+    const updatedDealerHand = game.dealerHand.map(c => ({ ...c, faceUp: true }));
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+    const calcScore = (cards) => {
+      let score = cards.reduce((a, c) => a + c.val, 0);
+      let aces = cards.filter(c => c.rank === 'A').length;
+      while (score > 21 && aces > 0) {
+        score -= 10;
+        aces -= 1;
+      }
+      return score;
+    };
+
+    let dScore = calcScore(updatedDealerHand);
+    while (dScore < 17) {
+      const rank = ranks[Math.floor(Math.random() * ranks.length)];
+      const suit = suits[Math.floor(Math.random() * suits.length)];
+      const val = ['J','Q','K'].includes(rank) ? 10 : rank === 'A' ? 11 : parseInt(rank);
+      updatedDealerHand.push({ rank, suit, val, isRed: suit === '♥' || suit === '♦', faceUp: true });
+      dScore = calcScore(updatedDealerHand);
+    }
+
+    let result = '';
+    let winAmount = 0;
+    if (dScore > 21 || game.playerScore > dScore) {
+      result = 'GAGNÉ !';
+      winAmount = game.bet * 2;
+      setCredits(prev => prev + winAmount);
+    } else if (game.playerScore === dScore) {
+      result = 'ÉGALITÉ !';
+      winAmount = game.bet;
+      setCredits(prev => prev + winAmount);
+    } else {
+      result = 'PERDU !';
+    }
+
+    setGame({
+      ...game,
+      dealerHand: updatedDealerHand,
+      dealerScore: dScore,
+      status: 'FINISHED',
+    });
+    setGameResult(result);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#020617" />
+      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
-      {/* HEADER PERMANENT */}
+      {/* HEADER OFFSUIT SOBRE NOIR & CONTOUR GRIS */}
       <View style={styles.header}>
         <View style={styles.brandGroup}>
           <View style={styles.brandIcon}>
             <Text style={styles.brandIconText}>♠</Text>
           </View>
-          <Text style={styles.brandTitle}>Blackjack Royale</Text>
+          <Text style={styles.brandTitle}>BLACKJACK</Text>
         </View>
 
         <View style={styles.creditsBadge}>
+          <Text style={styles.creditsLabel}>BANKROLL</Text>
           <Text style={styles.creditsText}>{credits} CR</Text>
         </View>
 
@@ -65,93 +231,167 @@ function App() {
         )}
       </View>
 
-      {/* CONTENU NAVIGATION */}
+      {/* NAVIGATION */}
       {activeTab === 'HOME' ? (
         <ScrollView contentContainerStyle={styles.homeContent}>
-          <Text style={styles.welcomeTitle}>Application Natif Expo</Text>
-          <Text style={styles.welcomeSub}>Blackjack iOS & Android sans aucun délai</Text>
+          <Text style={styles.welcomeTitle}>EXPO CASINO OFFSUIT</Text>
+          <Text style={styles.welcomeSub}>Design sombre épuré & réponse natif ultra-rapide</Text>
 
           <TouchableOpacity style={styles.bigPlayBtn} onPress={() => setActiveTab('GAME')}>
             <Text style={styles.bigPlayBtnText}>LANCER UNE PARTIE ♠</Text>
           </TouchableOpacity>
 
           <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>Casino Mobile Natif</Text>
-            <Text style={styles.statsText}>• Réseau ultra-rapide & fluide</Text>
-            <Text style={styles.statsText}>• 0 décalage, 0 écran noir</Text>
+            <Text style={styles.statsTitle}>SPÉCIFICATIONS TABLE OFFSUIT</Text>
+            <Text style={styles.statsText}>• Fond noir mat & bordures gris métallisé</Text>
+            <Text style={styles.statsText}>• Cartes au dos rouge & motif géométrique</Text>
+            <Text style={styles.statsText}>• Moteur Blackjack instantané intégré</Text>
             <Text style={styles.statsText}>• Jetons : 1, 2, 5, 10, 20 CR</Text>
-            <Text style={styles.statsText}>• Solde initial : 100 CR</Text>
           </View>
         </ScrollView>
       ) : (
         <View style={styles.gameContent}>
-          {/* TAPIS DE JEU VERTS */}
+          
+          {/* TAPIS NOIR AVEC MOTIFS GÉOMÉTRIQUES GOBELIN / POKER */}
           <View style={styles.tableFelt}>
-            <Text style={styles.feltLabel}>CROUPIER (Score: 18)</Text>
+            <View style={styles.feltPatternOverlay} />
 
-            {/* Cartes Croupier */}
-            <View style={styles.cardsRow}>
-              <View style={styles.cardFront}>
-                <Text style={styles.cardRankRed}>K</Text>
-                <Text style={styles.cardSuitRed}>♥</Text>
+            {/* ERROR BANNER */}
+            {error && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
               </View>
-              <View style={styles.cardFront}>
-                <Text style={styles.cardRankBlack}>8</Text>
-                <Text style={styles.cardSuitBlack}>♠</Text>
+            )}
+
+            {/* DEALER SECTION */}
+            <View style={styles.handSection}>
+              <View style={styles.handHeader}>
+                <Text style={styles.feltLabel}>CROUPIER</Text>
+                {game && (
+                  <View style={styles.scoreTag}>
+                    <Text style={styles.scoreTagText}>{game.dealerScore}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.cardsRow}>
+                {game ? (
+                  game.dealerHand.map((card, idx) => (
+                    <View key={idx} style={card.faceUp ? styles.cardFront : styles.cardBack}>
+                      {card.faceUp ? (
+                        <>
+                          <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
+                          <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
+                        </>
+                      ) : (
+                        <View style={styles.cardBackInner}>
+                          <Text style={styles.cardBackIcon}>♠</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyCardSlot}>
+                    <Text style={styles.emptySlotText}>PAS DE MANCHE</Text>
+                  </View>
+                )}
               </View>
             </View>
 
-            <Text style={styles.feltLabel}>JOUEUR (Score: 20)</Text>
-
-            {/* Cartes Joueur */}
-            <View style={styles.cardsRow}>
-              <View style={styles.cardFront}>
-                <Text style={styles.cardRankBlack}>10</Text>
-                <Text style={styles.cardSuitBlack}>♣</Text>
+            {/* RESULT BLAZON */}
+            {gameResult && (
+              <View style={styles.resultBlazon}>
+                <Text style={styles.resultBlazonText}>{gameResult}</Text>
               </View>
-              <View style={styles.cardFront}>
-                <Text style={styles.cardRankRed}>J</Text>
-                <Text style={styles.cardSuitRed}>♦</Text>
+            )}
+
+            {/* PLAYER SECTION */}
+            <View style={styles.handSection}>
+              <View style={styles.handHeader}>
+                <Text style={styles.feltLabel}>JOUEUR</Text>
+                {game && (
+                  <View style={styles.scoreTag}>
+                    <Text style={styles.scoreTagText}>{game.playerScore}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.cardsRow}>
+                {game ? (
+                  game.playerHand.map((card, idx) => (
+                    <View key={idx} style={styles.cardFront}>
+                      <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
+                      <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyCardSlot}>
+                    <Text style={styles.emptySlotText}>PLACEZ VOTRE MISE</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
 
-          {/* PANNEAU DE MISE ET JETONS */}
+          {/* CONTROLES DE MISE & JEU */}
           <View style={styles.bettingPanel}>
-            <View style={styles.betTitleRow}>
-              <Text style={styles.betTitle}>Mise actuelle : {currentBet} CR</Text>
-              {betChips.length > 0 && (
-                <TouchableOpacity onPress={handleClearChips}>
-                  <Text style={styles.clearBtnText}>Effacer</Text>
+            
+            {game && game.status === 'PLAYING' ? (
+              /* ACTION BUTTONS (TIRER / RESTER) */
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.hitBtn} onPress={handleHit} disabled={loading}>
+                  <Text style={styles.hitBtnText}>TIRER</Text>
                 </TouchableOpacity>
-              )}
-            </View>
 
-            {/* Jetons empilés de mise */}
-            <View style={styles.placedChipsRow}>
-              {betChips.length === 0 ? (
-                <Text style={styles.noChipsText}>Sélectionnez des jetons</Text>
-              ) : (
-                betChips.map((val, i) => (
-                  <TouchableOpacity key={i} style={styles.placedChip} onPress={() => handleRemoveChip(i)}>
-                    <Text style={styles.placedChipText}>{val}</Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-
-            {/* Barres de jetons 1, 2, 5, 10, 20 */}
-            <View style={styles.chipsRow}>
-              {[1, 2, 5, 10, 20].map((val) => (
-                <TouchableOpacity key={val} style={styles.chipBtn} onPress={() => handleAddChip(val)}>
-                  <Text style={styles.chipBtnText}>{val}</Text>
+                <TouchableOpacity style={styles.standBtn} onPress={handleStand} disabled={loading}>
+                  <Text style={styles.standBtnText}>RESTER</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              </View>
+            ) : (
+              /* BETTING STACK AND CHIPS SELECTOR */
+              <View style={styles.betSection}>
+                <View style={styles.betTitleRow}>
+                  <Text style={styles.betTitle}>MISE : {currentBet} CR</Text>
+                  {betChips.length > 0 && (
+                    <TouchableOpacity onPress={handleClearChips}>
+                      <Text style={styles.clearBtnText}>EFFACER</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-            <TouchableOpacity style={styles.dealBtn}>
-              <Text style={styles.dealBtnText}>DISTRIBUER ({currentBet} CR)</Text>
-            </TouchableOpacity>
+                {/* Jetons empilés */}
+                <View style={styles.placedChipsRow}>
+                  {betChips.length === 0 ? (
+                    <Text style={styles.noChipsText}>Touche un jeton pour miser</Text>
+                  ) : (
+                    betChips.map((val, i) => (
+                      <TouchableOpacity key={i} style={styles.placedChip} onPress={() => handleRemoveChip(i)}>
+                        <Text style={styles.placedChipText}>{val}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+
+                {/* Jetons 1, 2, 5, 10, 20 */}
+                <View style={styles.chipsRow}>
+                  {CHIP_VALUES.map((val) => (
+                    <TouchableOpacity key={val} style={styles.chipBtn} onPress={() => handleAddChip(val)}>
+                      <Text style={styles.chipBtnText}>{val}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.dealBtn, (currentBet <= 0 || currentBet > credits) && styles.dealBtnDisabled]} 
+                  onPress={handleStartGame}
+                  disabled={currentBet <= 0 || currentBet > credits || loading}
+                >
+                  <Text style={styles.dealBtnText}>
+                    {loading ? 'CHARGEMENT...' : `DISTRIBUER (${currentBet} CR)`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -162,7 +402,7 @@ function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#0a0a0a',
   },
   header: {
     flexDirection: 'row',
@@ -170,9 +410,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#121212',
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#262626',
   },
   brandGroup: {
     flexDirection: 'row',
@@ -183,52 +423,65 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#262626',
+    borderWidth: 1,
+    borderColor: '#404040',
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandIconText: {
-    color: '#020617',
+    color: '#e5e5e5',
     fontWeight: '900',
     fontSize: 16,
   },
   brandTitle: {
-    color: '#f59e0b',
+    color: '#f5f5f5',
     fontWeight: '900',
     fontSize: 14,
+    letterSpacing: 1,
   },
   creditsBadge: {
-    backgroundColor: '#020617',
-    paddingHorizontal: 10,
+    backgroundColor: '#171717',
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f59e0b',
+    borderColor: '#333333',
+    alignItems: 'center',
+  },
+  creditsLabel: {
+    color: '#737373',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   creditsText: {
-    color: '#f59e0b',
+    color: '#e5e5e5',
     fontWeight: '900',
     fontSize: 12,
   },
   playHeaderBtn: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: '#e11d48',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 12,
   },
   playHeaderBtnText: {
-    color: '#020617',
+    color: '#ffffff',
     fontWeight: '900',
     fontSize: 12,
+    letterSpacing: 0.5,
   },
   menuHeaderBtn: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: '#262626',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#404040',
   },
   menuHeaderBtnText: {
-    color: '#f8fafc',
+    color: '#e5e5e5',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -238,45 +491,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   welcomeTitle: {
-    color: '#f8fafc',
+    color: '#ffffff',
     fontSize: 22,
     fontWeight: '900',
     marginTop: 20,
+    letterSpacing: 1,
   },
   welcomeSub: {
-    color: '#94a3b8',
+    color: '#a3a3a3',
     fontSize: 13,
     marginBottom: 30,
   },
   bigPlayBtn: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#e11d48',
     width: '100%',
     paddingVertical: 18,
-    borderRadius: 20,
+    borderRadius: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f43f5e',
   },
   bigPlayBtnText: {
-    color: '#020617',
+    color: '#ffffff',
     fontWeight: '900',
     fontSize: 18,
+    letterSpacing: 1,
   },
   statsCard: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
+    backgroundColor: '#121212',
+    borderColor: '#262626',
     borderWidth: 1,
     width: '100%',
     padding: 20,
-    borderRadius: 20,
+    borderRadius: 16,
     marginTop: 30,
   },
   statsTitle: {
-    color: '#f59e0b',
-    fontWeight: '800',
-    fontSize: 16,
+    color: '#e5e5e5',
+    fontWeight: '900',
+    fontSize: 14,
     marginBottom: 10,
+    letterSpacing: 1,
   },
   statsText: {
-    color: '#cbd5e1',
+    color: '#a3a3a3',
     fontSize: 13,
     marginVertical: 4,
   },
@@ -285,96 +543,250 @@ const styles = StyleSheet.create({
   },
   tableFelt: {
     flex: 1,
-    backgroundColor: '#064e3b',
+    backgroundColor: '#121212',
     alignItems: 'center',
     justifyContent: 'space-around',
-    padding: 20,
+    padding: 16,
+    position: 'relative',
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
+  },
+  feltPatternOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: '#0a0a0a',
+    opacity: 0.5,
+    borderWidth: 1,
+    borderColor: '#1f1f1f',
+  },
+  errorBanner: {
+    backgroundColor: '#7f1d1d',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f87171',
+    zIndex: 20,
+  },
+  errorText: {
+    color: '#fef2f2',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  handSection: {
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 10,
+  },
+  handHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   feltLabel: {
-    color: '#a7f3d0',
-    fontWeight: '800',
-    fontSize: 13,
-    letterSpacing: 1,
+    color: '#737373',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1.5,
+  },
+  scoreTag: {
+    backgroundColor: '#262626',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#404040',
+  },
+  scoreTagText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 11,
   },
   cardsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   cardFront: {
-    width: 60,
-    height: 90,
-    backgroundColor: '#fff',
+    width: 64,
+    height: 94,
+    backgroundColor: '#fafafa',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: '#d4d4d4',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  cardBack: {
+    width: 64,
+    height: 94,
+    backgroundColor: '#991b1b',
+    borderRadius: 8,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: '#e5e5e5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  cardBackInner: {
+    flex: 1,
+    backgroundColor: '#7f1d1d',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBackIcon: {
+    color: '#fef2f2',
+    fontSize: 22,
+    fontWeight: '900',
   },
   cardRankRed: {
     color: '#dc2626',
     fontWeight: '900',
-    fontSize: 20,
+    fontSize: 22,
   },
   cardSuitRed: {
     color: '#dc2626',
-    fontSize: 18,
-  },
-  cardRankBlack: {
-    color: '#0f172a',
-    fontWeight: '900',
     fontSize: 20,
   },
+  cardRankBlack: {
+    color: '#171717',
+    fontWeight: '900',
+    fontSize: 22,
+  },
   cardSuitBlack: {
-    color: '#0f172a',
-    fontSize: 18,
+    color: '#171717',
+    fontSize: 20,
+  },
+  emptyCardSlot: {
+    width: 140,
+    height: 94,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#262626',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0d0d0d',
+  },
+  emptySlotText: {
+    color: '#525252',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  resultBlazon: {
+    backgroundColor: '#e11d48',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fda4af',
+    zIndex: 20,
+  },
+  resultBlazonText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 15,
+    letterSpacing: 1,
   },
   bettingPanel: {
-    backgroundColor: '#020617',
+    backgroundColor: '#0a0a0a',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
+    borderTopColor: '#262626',
+    alignItems: 'center',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    paddingVertical: 10,
+  },
+  hitBtn: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#4ade80',
+  },
+  hitBtnText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  standBtn: {
+    flex: 1,
+    backgroundColor: '#dc2626',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  standBtnText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  betSection: {
+    width: '100%',
     alignItems: 'center',
   },
   betTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   betTitle: {
-    color: '#f59e0b',
-    fontWeight: '800',
-    fontSize: 13,
+    color: '#e5e5e5',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1,
   },
   clearBtnText: {
     color: '#f43f5e',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: 11,
   },
   placedChipsRow: {
     flexDirection: 'row',
     gap: 8,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   noChipsText: {
-    color: '#64748b',
+    color: '#525252',
     fontSize: 12,
     fontStyle: 'italic',
   },
   placedChip: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#0284c7',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#262626',
     borderWidth: 2,
-    borderColor: '#e0f2fe',
+    borderColor: '#525252',
     alignItems: 'center',
     justifyContent: 'center',
   },
   placedChipText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '900',
     fontSize: 12,
   },
@@ -382,34 +794,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   chipBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#d97706',
+    backgroundColor: '#171717',
     borderWidth: 2,
-    borderColor: '#fef3c7',
+    borderColor: '#404040',
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipBtnText: {
-    color: '#fff',
+    color: '#e5e5e5',
     fontWeight: '900',
     fontSize: 13,
   },
   dealBtn: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#e11d48',
     width: '100%',
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f43f5e',
+  },
+  dealBtnDisabled: {
+    opacity: 0.3,
   },
   dealBtnText: {
-    color: '#020617',
+    color: '#ffffff',
     fontWeight: '900',
-    fontSize: 16,
+    fontSize: 15,
+    letterSpacing: 1,
   },
 });
 
