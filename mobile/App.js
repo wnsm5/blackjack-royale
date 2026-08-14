@@ -46,7 +46,11 @@ import {
   Target,
   RotateCcw,
   Edit3,
-  Smartphone
+  Smartphone,
+  Gem,
+  Sparkles,
+  Package,
+  Gift
 } from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
@@ -273,10 +277,79 @@ function App() {
   const [isDealing, setIsDealing] = useState(false);
   const [hasInsurance, setHasInsurance] = useState(false);
 
+  // Gems Currency State (Default: 0)
+  const [gems, setGems] = useState(0);
+  const [rewardModalInfo, setRewardModalInfo] = useState(null);
+
   // User Profile State (Default: user_XXXX with random digits)
   const [username, setUsername] = useState(() => `user_${Math.floor(1000 + Math.random() * 9000)}`);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [nameInput, setNameInput] = useState('');
+
+  // Coffres de la Boutique
+  const CHESTS = [
+    {
+      id: 'BRONZE',
+      name: 'Coffre Bronze',
+      cost: 50,
+      color: '#cd7f32',
+      borderColor: '#b45309',
+      bgGlow: '#1c1308',
+      desc: '+250 à 600 CRÉDITS',
+      minCredits: 250,
+      maxCredits: 600,
+      badgeText: 'BOOST 50 GEMS',
+    },
+    {
+      id: 'ARGENT',
+      name: 'Coffre Épique',
+      cost: 100,
+      color: '#38bdf8',
+      borderColor: '#0284c7',
+      bgGlow: '#081d2c',
+      desc: '+650 à 1500 CRÉDITS',
+      minCredits: 650,
+      maxCredits: 1500,
+      badgeText: 'ÉPIQUE 100 GEMS',
+    },
+    {
+      id: 'OR',
+      name: 'Coffre Légendaire',
+      cost: 150,
+      color: '#fbbf24',
+      borderColor: '#d97706',
+      bgGlow: '#261b05',
+      desc: '+1600 à 4000 CRÉDITS',
+      minCredits: 1600,
+      maxCredits: 4000,
+      badgeText: 'LÉGENDAIRE 150 GEMS',
+    },
+  ];
+
+  const handleBuyChest = (chest) => {
+    if (gems < chest.cost) {
+      triggerHaptic(30);
+      setRewardModalInfo({
+        type: 'ERROR',
+        title: 'GEMS INSUFFISANTES',
+        desc: `Il vous manque ${chest.cost - gems} Gems pour débloquer le ${chest.name}.\n\nCliquez sur "Obtenir +50 Gems" ci-dessous pour faire le plein !`,
+      });
+      return;
+    }
+
+    triggerHaptic(40);
+    setGems(prev => prev - chest.cost);
+
+    const rewardCredits = Math.floor(chest.minCredits + Math.random() * (chest.maxCredits - chest.minCredits));
+    setCredits(prev => prev + rewardCredits);
+    setBalanceHistory(prev => [...prev, credits + rewardCredits]);
+
+    setRewardModalInfo({
+      type: 'CHEST',
+      title: chest.name.toUpperCase(),
+      desc: `RÉCOMPENSE DÉBLOQUÉE !\n\nVous obtenez :\n💰 +${rewardCredits} CRÉDITS !`,
+    });
+  };
   
   // Vibration / Haptics State
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
@@ -370,8 +443,13 @@ function App() {
       onPanResponderRelease: (_, gs) => {
         if (Math.abs(gs.dx) < 50) return;
         const tab = activeTabRef.current;
-        if (gs.dx < -50 && tab === 'HOME') changeTabRef.current && changeTabRef.current('PROFILE');
-        else if (gs.dx > 50 && tab === 'PROFILE') changeTabRef.current && changeTabRef.current('HOME');
+        if (gs.dx < -50) { // Swipe left -> Next tab
+          if (tab === 'SHOP') changeTabRef.current && changeTabRef.current('HOME');
+          else if (tab === 'HOME') changeTabRef.current && changeTabRef.current('PROFILE');
+        } else if (gs.dx > 50) { // Swipe right -> Previous tab
+          if (tab === 'PROFILE') changeTabRef.current && changeTabRef.current('HOME');
+          else if (tab === 'HOME') changeTabRef.current && changeTabRef.current('SHOP');
+        }
       },
     })
   ).current;
@@ -1249,14 +1327,80 @@ function App() {
         </View>
       )}
 
-      {/* CONTENU PRINCIPAL (HOME + PROFILE): rendu conditionnel + swipe via PanResponder capture */}
+      {/* HEADER GEMS FIXE EN HAUT À GAUCHE (BOUTIQUE, ACCUEIL, PROFIL) — FOND NOIR PUR OLED */}
+      {activeTab !== 'GAME' && profileSubSection === null && (
+        <View style={styles.topLeftGemsBar}>
+          <View style={styles.gemsTagBox}>
+            <Gem size={15} color="#06b6d4" fill="#0891b2" />
+            <Text style={styles.gemsTagText}>{gems} GEMS</Text>
+          </View>
+        </View>
+      )}
+
+      {/* CONTENU PRINCIPAL (SHOP + HOME + PROFILE): rendu conditionnel + swipe via PanResponder capture */}
       {activeTab !== 'GAME' && (
         <Animated.View
           style={[styles.mainContent, { opacity: tabFadeAnim }]}
           {...swipeTabPanResponder.panHandlers}
         >
 
-          {/* TAB HOME */}
+          {/* TAB 1: BOUTIQUE (ACHAT DE COFFRES 50, 100, 150 GEMS) */}
+          {activeTab === 'SHOP' && (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.shopScroll}>
+              <View style={styles.shopHeaderBox}>
+                <Text style={styles.shopTitle}>BOUTIQUE ROYALE</Text>
+                <Text style={styles.shopSubTitle}>Ouvrez des coffres mystères avec vos Gems</Text>
+              </View>
+
+              {/* BOUTON TEST POUR OBTENIR +50 GEMS */}
+              <TouchableOpacity 
+                style={styles.claimGemsBtn} 
+                onPress={() => {
+                  triggerHaptic(20);
+                  setGems(prev => prev + 50);
+                }}
+                activeOpacity={0.8}
+              >
+                <Sparkles size={16} color="#06b6d4" />
+                <Text style={styles.claimGemsBtnText}>OBTENIR +50 GEMS (RECHARGE)</Text>
+              </TouchableOpacity>
+
+              {/* GRILLE DES 3 COFFRES (50, 100, 150 GEMS) */}
+              <View style={styles.chestsGrid}>
+                {CHESTS.map((chest) => (
+                  <View 
+                    key={chest.id} 
+                    style={[
+                      styles.chestCard, 
+                      { borderColor: chest.borderColor, backgroundColor: chest.bgGlow }
+                    ]}
+                  >
+                    <View style={styles.chestBadgeTop}>
+                      <Text style={[styles.chestBadgeText, { color: chest.color }]}>{chest.badgeText}</Text>
+                    </View>
+
+                    <View style={styles.chestIconWrapper}>
+                      <Package size={42} color={chest.color} />
+                    </View>
+
+                    <Text style={styles.chestName}>{chest.name}</Text>
+                    <Text style={styles.chestDesc}>{chest.desc}</Text>
+
+                    <TouchableOpacity 
+                      style={[styles.buyChestBtn, { backgroundColor: chest.borderColor }]}
+                      onPress={() => handleBuyChest(chest)}
+                      activeOpacity={0.8}
+                    >
+                      <Gem size={14} color="#ffffff" fill="#ffffff" />
+                      <Text style={styles.buyChestBtnText}>OUVRIR ({chest.cost} GEMS)</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+
+          {/* TAB 2: ACCUEIL */}
           {activeTab === 'HOME' && (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.homeScroll}>
               <View style={styles.homeHeroCard}>
@@ -1699,9 +1843,12 @@ function App() {
       {/* BARRE EN BAS (MASQUÉE PENDANT LE JEU ET DANS TOUS LES SOUS-ONGLETS DU PROFIL) */}
       {activeTab !== 'GAME' && profileSubSection === null && (
         <View style={styles.bottomTabBarTranslucent}>
-          <View style={[styles.tabItem, styles.tabItemDisabled]}>
-            <ShoppingBag size={22} color="#404040" />
-          </View>
+          <TouchableOpacity 
+            style={[styles.tabItem, activeTab === 'SHOP' && styles.tabItemActive]} 
+            onPress={() => changeTab('SHOP')}
+          >
+            <ShoppingBag size={24} color={activeTab === 'SHOP' ? '#06b6d4' : '#737373'} />
+          </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.tabItem, activeTab === 'HOME' && styles.tabItemActive]} 
@@ -1784,6 +1931,38 @@ function App() {
         </View>
       </Modal>
 
+      {/* MODAL D'OUVERTURE DE COFFRE ET GEMS */}
+      <Modal
+        visible={rewardModalInfo !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setRewardModalInfo(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.leaveModalBox}>
+            <Text style={[
+              styles.modalTitle, 
+              rewardModalInfo?.type === 'ERROR' ? { color: '#ef4444' } : { color: '#06b6d4' }
+            ]}>
+              {rewardModalInfo?.title}
+            </Text>
+            <Text style={styles.modalSubText}>{rewardModalInfo?.desc}</Text>
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity 
+                style={[
+                  styles.modalConfirmBtn, 
+                  rewardModalInfo?.type === 'ERROR' ? { backgroundColor: '#dc2626' } : { backgroundColor: '#0891b2' }
+                ]} 
+                onPress={() => setRewardModalInfo(null)}
+              >
+                <Text style={styles.modalConfirmBtnText}>SUPER !</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -1792,6 +1971,131 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  // TOP-LEFT GEMS BAR (POUR BOUTIQUE, ACCUEIL, PROFIL) — FOND NOIR PUR OLED, PAS DE CELLULE GRISE
+  topLeftGemsBar: {
+    position: 'absolute',
+    top: 14,
+    left: 16,
+    zIndex: 999,
+  },
+  gemsTagBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#000000',
+    borderColor: '#262626',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  gemsTagText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
+  // SHOP STYLES
+  shopScroll: {
+    paddingHorizontal: 16,
+    paddingTop: 54,
+    paddingBottom: 110,
+    gap: 16,
+  },
+  shopHeaderBox: {
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  shopTitle: {
+    color: '#06b6d4',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  shopSubTitle: {
+    color: '#737373',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  claimGemsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#081d2c',
+    borderColor: '#0284c7',
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+  },
+  claimGemsBtnText: {
+    color: '#38bdf8',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  chestsGrid: {
+    gap: 16,
+    marginTop: 6,
+  },
+  chestCard: {
+    borderWidth: 1.5,
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  chestBadgeTop: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    backgroundColor: '#000000',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  chestBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  chestIconWrapper: {
+    marginVertical: 10,
+  },
+  chestName: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  chestDesc: {
+    color: '#a3a3a3',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  buyChestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  buyChestBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   header: {
     flexDirection: 'row',
