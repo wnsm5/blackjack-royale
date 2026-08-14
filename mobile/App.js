@@ -9,13 +9,27 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
-  Dimensions,
 } from 'react-native';
+import {
+  ShoppingBag,
+  Home,
+  User,
+  Play,
+  TrendingUp,
+  Award,
+  History,
+  Settings,
+  HelpCircle,
+  RotateCcw,
+  ChevronRight,
+  ShieldAlert,
+  Coins
+} from 'lucide-react-native';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
-// Custom authentic Casino Chip component in React Native
-function CasinoChip({ value, onPress, onLongPress }) {
+// Custom authentic Casino Chip component
+function CasinoChip({ value, onPress }) {
   const chipColors = {
     1: { bg: '#262626', border: '#525252', text: '#ffffff', stripe: '#404040' },
     2: { bg: '#991b1b', border: '#fca5a5', text: '#fef2f2', stripe: '#b91c1c' },
@@ -28,10 +42,8 @@ function CasinoChip({ value, onPress, onLongPress }) {
     <TouchableOpacity
       style={[styles.casinoChip, { backgroundColor: chipColors.bg, borderColor: chipColors.border }]}
       onPress={onPress}
-      onLongPress={onLongPress}
       activeOpacity={0.8}
     >
-      {/* Dashed outer ring pattern */}
       <View style={[styles.chipInnerRing, { borderColor: chipColors.stripe }]}>
         <View style={styles.chipCenterCircle}>
           <Text style={[styles.chipValueText, { color: chipColors.text }]}>{value}</Text>
@@ -42,17 +54,27 @@ function CasinoChip({ value, onPress, onLongPress }) {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState('TABLE'); // 'TABLE' | 'STATS' | 'HISTORY' | 'PROFILE'
+  const [activeTab, setActiveTab] = useState('HOME'); // 'HOME' | 'GAME' | 'PROFILE' | 'PROFILE_SUB'
+  const [profileSubSection, setProfileSubSection] = useState(null); // 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'SETTINGS' | 'LEARN'
+  
   const [credits, setCredits] = useState(100);
   const [currentBet, setCurrentBet] = useState(10);
   const [betChips, setBetChips] = useState([]);
   
-  // Real Game Engine state
+  // Game Engine state
   const [game, setGame] = useState(null);
-  const [error, setError] = useState(null);
   const [gameResult, setGameResult] = useState(null);
 
-  // Add chip
+  // Match History state (for home view & profile history)
+  const [history, setHistory] = useState([
+    { id: 1, type: 'WIN', bet: 10, payout: +20, score: '20 vs 18', date: 'Aujourd\'hui 22:04' },
+    { id: 2, type: 'LOSS', bet: 10, payout: -10, score: '17 vs 19', date: 'Aujourd\'hui 21:58' },
+    { id: 3, type: 'WIN', bet: 20, payout: +40, score: '21 vs 20', date: 'Aujourd\'hui 21:45' },
+    { id: 4, type: 'BLACKJACK', bet: 10, payout: +25, score: '21 BJ vs 18', date: 'Hier 23:12' },
+    { id: 5, type: 'LOSS', bet: 5, payout: -5, score: 'BUST (23)', date: 'Hier 22:50' },
+  ]);
+
+  // Chip handlers
   const handleAddChip = (val) => {
     const total = betChips.reduce((a, c) => a + c, 0);
     if (total + val <= credits) {
@@ -62,7 +84,6 @@ function App() {
     }
   };
 
-  // Remove chip
   const handleRemoveChip = (idx) => {
     const newChips = betChips.filter((_, i) => i !== idx);
     setBetChips(newChips);
@@ -74,7 +95,7 @@ function App() {
     setCurrentBet(0);
   };
 
-  // Game Engine Actions
+  // Game Engine logic
   const handleStartGame = () => {
     if (currentBet <= 0 || currentBet > credits) return;
     setGameResult(null);
@@ -144,6 +165,7 @@ function App() {
         status: 'FINISHED',
       });
       setGameResult('BUST - PERDU !');
+      setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: game.bet, payout: -game.bet, score: `BUST (${score})`, date: 'À l\'instant' }, ...prev]);
     } else {
       setGame({
         ...game,
@@ -181,16 +203,24 @@ function App() {
 
     let result = '';
     let winAmount = 0;
+    let type = 'LOSS';
+    let payout = -game.bet;
+
     if (dScore > 21 || game.playerScore > dScore) {
       result = 'GAGNÉ !';
+      type = 'WIN';
       winAmount = game.bet * 2;
+      payout = +game.bet;
       setCredits(prev => prev + winAmount);
     } else if (game.playerScore === dScore) {
       result = 'ÉGALITÉ !';
+      type = 'PUSH';
       winAmount = game.bet;
+      payout = 0;
       setCredits(prev => prev + winAmount);
     } else {
       result = 'PERDU !';
+      type = 'LOSS';
     }
 
     setGame({
@@ -200,235 +230,345 @@ function App() {
       status: 'FINISHED',
     });
     setGameResult(result);
+    setHistory(prev => [{ id: Date.now(), type, bet: game.bet, payout, score: `${game.playerScore} vs ${dScore}`, date: 'À l\'instant' }, ...prev]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
 
-      {/* HEADER DISCRET OFFSUIT (SOLDE ET NOM DU JEU) */}
+      {/* HEADER COMPACT SOMBRE */}
       <View style={styles.header}>
-        <View style={styles.brandGroup}>
-          <Text style={styles.brandTitle}>OFFSUIT ♠</Text>
-        </View>
-
-        <View style={styles.bankrollBadge}>
-          <Text style={styles.bankrollLabel}>SOLDE</Text>
-          <Text style={styles.bankrollValue}>{credits} CR</Text>
+        <Text style={styles.brandTitle}>OFFSUIT</Text>
+        <View style={styles.bankrollTag}>
+          <Coins size={12} color="#a3a3a3" />
+          <Text style={styles.bankrollText}>{credits} CR</Text>
         </View>
       </View>
 
-      {/* VUE PRINCIPALE (TABLE / STATS / HISTORIQUE / PROFIL) */}
-      {activeTab === 'TABLE' && (
-        <View style={styles.gameContent}>
-          {/* TAPIS NOIR AVEC BORDURE OVALE DE TABLE DE CASINO */}
-          <View style={styles.tableOvalFrame}>
-            <View style={styles.tableInnerFelt}>
+      {/* CONTENU PRINCIPAL PAR TAB */}
+      <View style={styles.mainContent}>
+
+        {/* ==============================================================
+            TAB 1: ACCUEIL (BOUTON JOUER + BANKROLL + HISTORIQUE ROUGE/VERT)
+           ============================================================== */}
+        {activeTab === 'HOME' && (
+          <ScrollView contentContainerStyle={styles.homeScroll}>
+            {/* TOTAL D'ARGENT & BOUTON JOUER */}
+            <View style={styles.homeHeroCard}>
+              <Text style={styles.heroLabel}>SOLDE DISPONIBLE</Text>
+              <Text style={styles.heroCredits}>{credits} CR</Text>
               
-              {/* Sabot & Titre Table */}
-              <View style={styles.tableCenterMarking}>
-                <Text style={styles.tableArcText}>BLACKJACK PAYS 3 TO 2</Text>
-                <Text style={styles.tableSubArcText}>DEALER MUST DRAW TO 16 AND STAND ON ALL 17S</Text>
-              </View>
-
-              {/* DEALER HAND */}
-              <View style={styles.handSection}>
-                <View style={styles.handHeader}>
-                  <Text style={styles.feltLabel}>CROUPIER</Text>
-                  {game && (
-                    <View style={styles.scoreTag}>
-                      <Text style={styles.scoreTagText}>{game.dealerScore}</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.cardsRow}>
-                  {game ? (
-                    game.dealerHand.map((card, idx) => (
-                      <View key={idx} style={card.faceUp ? styles.cardFront : styles.cardBack}>
-                        {card.faceUp ? (
-                          <>
-                            <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
-                            <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
-                          </>
-                        ) : (
-                          <View style={styles.cardBackPattern}>
-                            <Text style={styles.cardBackSymbol}>♠</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))
-                  ) : (
-                    <View style={styles.emptyCardSlot}>
-                      <Text style={styles.emptySlotText}>ATTENTE DE MANCHE</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* BANNIÈRE RÉSULTAT */}
-              {gameResult && (
-                <View style={styles.resultBanner}>
-                  <Text style={styles.resultBannerText}>{gameResult}</Text>
-                </View>
-              )}
-
-              {/* PLAYER HAND */}
-              <View style={styles.handSection}>
-                <View style={styles.handHeader}>
-                  <Text style={styles.feltLabel}>JOUEUR</Text>
-                  {game && (
-                    <View style={styles.scoreTag}>
-                      <Text style={styles.scoreTagText}>{game.playerScore}</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.cardsRow}>
-                  {game ? (
-                    game.playerHand.map((card, idx) => (
-                      <View key={idx} style={styles.cardFront}>
-                        <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
-                        <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
-                      </View>
-                    ))
-                  ) : (
-                    <View style={styles.emptyCardSlot}>
-                      <Text style={styles.emptySlotText}>PLACEZ VOS JETONS</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-
+              <TouchableOpacity style={styles.heroPlayBtn} onPress={() => setActiveTab('GAME')}>
+                <Play size={20} color="#ffffff" fill="#ffffff" />
+                <Text style={styles.heroPlayBtnText}>JOUER UNE MANCHE</Text>
+              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* PANNEAU DES ACTION / MISE */}
-          <View style={styles.bettingControlPanel}>
-            {game && game.status === 'PLAYING' ? (
-              <View style={styles.actionRow}>
-                <TouchableOpacity style={styles.hitBtn} onPress={handleHit}>
-                  <Text style={styles.actionBtnText}>TIRER</Text>
-                </TouchableOpacity>
+            {/* HISTORIQUE DE PARTIE (VERT SI GAGNE, ROUGE SI PERDU) */}
+            <View style={styles.historySection}>
+              <Text style={styles.sectionTitle}>DERNIÈRES PARTIES</Text>
+              
+              {history.map((item) => (
+                <View 
+                  key={item.id} 
+                  style={[
+                    styles.historyRow, 
+                    item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin : item.type === 'PUSH' ? styles.historyRowPush : styles.historyRowLoss
+                  ]}
+                >
+                  <View style={styles.historyLeft}>
+                    <Text style={[styles.historyTypeBadge, item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
+                      {item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU'}
+                    </Text>
+                    <Text style={styles.historyScoreText}>{item.score}</Text>
+                  </View>
 
-                <TouchableOpacity style={styles.standBtn} onPress={handleStand}>
-                  <Text style={styles.actionBtnText}>RESTER</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.bettingControls}>
-                <View style={styles.betHeaderRow}>
-                  <Text style={styles.betTotalText}>MISE : {currentBet} CR</Text>
-                  {betChips.length > 0 && (
-                    <TouchableOpacity onPress={handleClearChips}>
-                      <Text style={styles.clearBetText}>EFFACER</Text>
-                    </TouchableOpacity>
-                  )}
+                  <View style={styles.historyRight}>
+                    <Text style={[styles.historyAmountText, item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
+                      {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
+                    </Text>
+                    <Text style={styles.historyDateText}>{item.date}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+
+        {/* ==============================================================
+            TAB 2: TABLE DE JEU (GAME)
+           ============================================================== */}
+        {activeTab === 'GAME' && (
+          <View style={styles.gameContainer}>
+            <View style={styles.tableFrame}>
+              <View style={styles.tableInnerFelt}>
+                
+                {/* Marqueurs filigrane de table */}
+                <View style={styles.tableCenterMarking}>
+                  <Text style={styles.tableArcText}>BLACKJACK PAYS 3 TO 2</Text>
                 </View>
 
-                {/* Jetons empilés de mise */}
-                <View style={styles.stackedChipsContainer}>
-                  {betChips.length === 0 ? (
-                    <Text style={styles.noChipsHint}>Sélectionnez des jetons ci-dessous</Text>
-                  ) : (
-                    <View style={styles.stackedChipsRow}>
-                      {betChips.map((val, i) => (
+                {/* CROUPIER */}
+                <View style={styles.handSection}>
+                  <View style={styles.handHeader}>
+                    <Text style={styles.feltLabel}>CROUPIER</Text>
+                    {game && (
+                      <View style={styles.scoreBadge}>
+                        <Text style={styles.scoreBadgeText}>{game.dealerScore}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.cardsRow}>
+                    {game ? (
+                      game.dealerHand.map((card, idx) => (
+                        <View key={idx} style={card.faceUp ? styles.cardFront : styles.cardBack}>
+                          {card.faceUp ? (
+                            <>
+                              <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
+                              <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
+                            </>
+                          ) : (
+                            <View style={styles.cardBackInner}>
+                              <Text style={styles.cardBackSymbol}>♠</Text>
+                            </View>
+                          )}
+                        </View>
+                      ))
+                    ) : (
+                      <View style={styles.emptyCardSlot}>
+                        <Text style={styles.emptySlotText}>ATTENTE DE MANCHE</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* BANNIÈRE RÉSULTAT */}
+                {gameResult && (
+                  <View style={styles.resultBanner}>
+                    <Text style={styles.resultBannerText}>{gameResult}</Text>
+                  </View>
+                )}
+
+                {/* JOUEUR */}
+                <View style={styles.handSection}>
+                  <View style={styles.handHeader}>
+                    <Text style={styles.feltLabel}>JOUEUR</Text>
+                    {game && (
+                      <View style={styles.scoreBadge}>
+                        <Text style={styles.scoreBadgeText}>{game.playerScore}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.cardsRow}>
+                    {game ? (
+                      game.playerHand.map((card, idx) => (
+                        <View key={idx} style={styles.cardFront}>
+                          <Text style={card.isRed ? styles.cardRankRed : styles.cardRankBlack}>{card.rank}</Text>
+                          <Text style={card.isRed ? styles.cardSuitRed : styles.cardSuitBlack}>{card.suit}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <View style={styles.emptyCardSlot}>
+                        <Text style={styles.emptySlotText}>PLACEZ VOS JETONS</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+              </View>
+            </View>
+
+            {/* CONTROLES DE MANCHE / JETONS */}
+            <View style={styles.gameControlsPanel}>
+              {game && game.status === 'PLAYING' ? (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.hitBtn} onPress={handleHit}>
+                    <Text style={styles.actionBtnText}>TIRER</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.standBtn} onPress={handleStand}>
+                    <Text style={styles.actionBtnText}>RESTER</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.bettingControls}>
+                  <View style={styles.betHeaderRow}>
+                    <Text style={styles.betTotalText}>MISE : {currentBet} CR</Text>
+                    {betChips.length > 0 && (
+                      <TouchableOpacity onPress={handleClearChips}>
+                        <Text style={styles.clearBetText}>EFFACER</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Jetons empilés */}
+                  <View style={styles.stackedChipsRow}>
+                    {betChips.length === 0 ? (
+                      <Text style={styles.noChipsHint}>Touches un jeton pour miser</Text>
+                    ) : (
+                      betChips.map((val, i) => (
                         <View key={i} style={{ marginLeft: i > 0 ? -16 : 0, zIndex: i }}>
                           <CasinoChip value={val} onPress={() => handleRemoveChip(i)} />
                         </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                      ))
+                    )}
+                  </View>
 
-                {/* Jetons disponibles 1, 2, 5, 10, 20 */}
-                <View style={styles.chipBar}>
-                  {CHIP_VALUES.map((val) => (
-                    <CasinoChip key={val} value={val} onPress={() => handleAddChip(val)} />
-                  ))}
-                </View>
+                  {/* Jetons 1, 2, 5, 10, 20 */}
+                  <View style={styles.chipBar}>
+                    {CHIP_VALUES.map((val) => (
+                      <CasinoChip key={val} value={val} onPress={() => handleAddChip(val)} />
+                    ))}
+                  </View>
 
+                  <TouchableOpacity 
+                    style={[styles.dealBtn, (currentBet <= 0 || currentBet > credits) && styles.dealBtnDisabled]} 
+                    onPress={handleStartGame}
+                    disabled={currentBet <= 0 || currentBet > credits}
+                  >
+                    <Text style={styles.dealBtnText}>DISTRIBUER ({currentBet} CR)</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ==============================================================
+            TAB 3: PROFIL (MODIFIABLE + STATS + HISTORIQUE + SUCCÈS)
+           ============================================================== */}
+        {activeTab === 'PROFILE' && (
+          <ScrollView contentContainerStyle={styles.profileScroll}>
+            {profileSubSection ? (
+              /* SOUS-SECTION DE PROFIL */
+              <View style={styles.subSectionContainer}>
                 <TouchableOpacity 
-                  style={[styles.dealBtn, (currentBet <= 0 || currentBet > credits) && styles.dealBtnDisabled]} 
-                  onPress={handleStartGame}
-                  disabled={currentBet <= 0 || currentBet > credits}
+                  style={styles.backToProfileBtn} 
+                  onPress={() => setProfileSubSection(null)}
                 >
-                  <Text style={styles.dealBtnText}>DISTRIBUER ({currentBet} CR)</Text>
+                  <Text style={styles.backToProfileText}>← RETOUR PROFIL</Text>
                 </TouchableOpacity>
+
+                {profileSubSection === 'STATS' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>STATISTIQUES DÉTAILLÉES</Text>
+                    <Text style={styles.subText}>• Total Manches : {history.length}</Text>
+                    <Text style={styles.subText}>• Victoires : {history.filter(h => h.type === 'WIN' || h.type === 'BLACKJACK').length}</Text>
+                    <Text style={styles.subText}>• Taux de Victoire : 60%</Text>
+                    <Text style={styles.subText}>• Blackjacks : 1</Text>
+                  </View>
+                )}
+
+                {profileSubSection === 'SETTINGS' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
+                    <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
+                    <Text style={styles.subText}>• Audio / Effets sonores : Activé</Text>
+                    <Text style={styles.subText}>• Thème : Sombre Métallique (Offsuit)</Text>
+                  </View>
+                )}
+
+                {profileSubSection === 'ACHIEVEMENTS' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>SUCCÈS & TROPHÉES</Text>
+                    <Text style={styles.subText}>🏆 Premier Blackjack — Débloqué</Text>
+                    <Text style={styles.subText}>🏆 Série de 3 Victoires — Débloqué</Text>
+                    <Text style={styles.subText}>🔒 High Roller (Mise 100 CR) — Verrouillé</Text>
+                  </View>
+                )}
+
+                {profileSubSection === 'LEARN' && (
+                  <View style={styles.subCard}>
+                    <Text style={styles.subTitle}>RÈGLES DU BLACKJACK</Text>
+                    <Text style={styles.subText}>• Atteignez 21 sans le dépasser.</Text>
+                    <Text style={styles.subText}>• Le Croupier s'arrête à 17 ou plus.</Text>
+                    <Text style={styles.subText}>• Les As valent 1 ou 11 au choix.</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              /* MENU PROFIL PRINCIPAL */
+              <View style={styles.profileMenuContainer}>
+                <View style={styles.profileHeaderCard}>
+                  <View style={styles.avatarCircle}>
+                    <User size={28} color="#ffffff" />
+                  </View>
+                  <Text style={styles.profileUsername}>Offsuit_Player</Text>
+                  <Text style={styles.profileLevelText}>Joueur Niveau 5 • {credits} CR</Text>
+                </View>
+
+                <View style={styles.menuOptionsGroup}>
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('STATS')}>
+                    <View style={styles.optionLeft}>
+                      <TrendingUp size={18} color="#a3a3a3" />
+                      <Text style={styles.optionLabel}>Statistiques de jeu</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('ACHIEVEMENTS')}>
+                    <View style={styles.optionLeft}>
+                      <Award size={18} color="#a3a3a3" />
+                      <Text style={styles.optionLabel}>Succès & Trophées</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('LEARN')}>
+                    <View style={styles.optionLeft}>
+                      <HelpCircle size={18} color="#a3a3a3" />
+                      <Text style={styles.optionLabel}>Règles & Stratégie</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.menuOptionRow} onPress={() => setProfileSubSection('SETTINGS')}>
+                    <View style={styles.optionLeft}>
+                      <Settings size={18} color="#a3a3a3" />
+                      <Text style={styles.optionLabel}>Paramètres</Text>
+                    </View>
+                    <ChevronRight size={16} color="#525252" />
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
-          </View>
-        </View>
-      )}
+          </ScrollView>
+        )}
 
-      {activeTab === 'STATS' && (
-        <ScrollView contentContainerStyle={styles.subPageContent}>
-          <Text style={styles.subPageTitle}>STATISTIQUES DE JEU</Text>
-          <View style={styles.subPageCard}>
-            <Text style={styles.subCardLabel}>Manches Jouées : 42</Text>
-            <Text style={styles.subCardLabel}>Taux de Victoire : 54%</Text>
-            <Text style={styles.subCardLabel}>Blackjacks : 7</Text>
-            <Text style={styles.subCardLabel}>Profit Net : +180 CR</Text>
-          </View>
-        </ScrollView>
-      )}
+      </View>
 
-      {activeTab === 'HISTORY' && (
-        <ScrollView contentContainerStyle={styles.subPageContent}>
-          <Text style={styles.subPageTitle}>HISTORIQUE DES MANCHES</Text>
-          <View style={styles.subPageCard}>
-            <Text style={styles.subCardLabel}>#104 • GAGNÉ (+20 CR)</Text>
-            <Text style={styles.subCardLabel}>#103 • PERDU (-10 CR)</Text>
-            <Text style={styles.subCardLabel}>#102 • BLACKJACK (+25 CR)</Text>
-            <Text style={styles.subCardLabel}>#101 • ÉGALITÉ (+10 CR)</Text>
-          </View>
-        </ScrollView>
-      )}
-
-      {activeTab === 'PROFILE' && (
-        <ScrollView contentContainerStyle={styles.subPageContent}>
-          <Text style={styles.subPageTitle}>PROFIL JOUEUR</Text>
-          <View style={styles.subPageCard}>
-            <Text style={styles.subCardLabel}>Pseudo : Offsuit_Player</Text>
-            <Text style={styles.subCardLabel}>Bankroll : {credits} CR</Text>
-            <Text style={styles.subCardLabel}>Niveau : 5 (Pro)</Text>
-          </View>
-        </ScrollView>
-      )}
-
-      {/* NAVIGATION DU BAS (STYLE NATIVE BAR EN BAS) */}
+      {/* ==============================================================
+          BARRE NATIVE EN BAS A 3 BOUTONS (BOUTIQUE, ACCUEIL, PROFIL)
+         ============================================================== */}
       <View style={styles.bottomTabBar}>
+        
+        {/* BOUTON 1: BOUTIQUE (GRISÉ / INACTIF) */}
+        <View style={[styles.tabItem, styles.tabItemDisabled]}>
+          <ShoppingBag size={20} color="#404040" />
+          <Text style={styles.tabLabelDisabled}>BOUTIQUE</Text>
+        </View>
+
+        {/* BOUTON 2: ACCUEIL (CENTRAL) */}
         <TouchableOpacity 
-          style={[styles.tabBarItem, activeTab === 'TABLE' && styles.tabBarItemActive]} 
-          onPress={() => setActiveTab('TABLE')}
+          style={[styles.tabItem, (activeTab === 'HOME' || activeTab === 'GAME') && styles.tabItemActive]} 
+          onPress={() => { setActiveTab('HOME'); setProfileSubSection(null); }}
         >
-          <Text style={[styles.tabBarIcon, activeTab === 'TABLE' && styles.tabBarTextActive]}>♠</Text>
-          <Text style={[styles.tabBarLabel, activeTab === 'TABLE' && styles.tabBarTextActive]}>TABLE</Text>
+          <Home size={22} color={(activeTab === 'HOME' || activeTab === 'GAME') ? '#ffffff' : '#737373'} />
+          <Text style={[(activeTab === 'HOME' || activeTab === 'GAME') ? styles.tabLabelActive : styles.tabLabel]}>ACCUEIL</Text>
         </TouchableOpacity>
 
+        {/* BOUTON 3: PROFIL (DROIT) */}
         <TouchableOpacity 
-          style={[styles.tabBarItem, activeTab === 'STATS' && styles.tabBarItemActive]} 
-          onPress={() => setActiveTab('STATS')}
-        >
-          <Text style={[styles.tabBarIcon, activeTab === 'STATS' && styles.tabBarTextActive]}>📊</Text>
-          <Text style={[styles.tabBarLabel, activeTab === 'STATS' && styles.tabBarTextActive]}>STATS</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.tabBarItem, activeTab === 'HISTORY' && styles.tabBarItemActive]} 
-          onPress={() => setActiveTab('HISTORY')}
-        >
-          <Text style={[styles.tabBarIcon, activeTab === 'HISTORY' && styles.tabBarTextActive]}>📜</Text>
-          <Text style={[styles.tabBarLabel, activeTab === 'HISTORY' && styles.tabBarTextActive]}>HISTO</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.tabBarItem, activeTab === 'PROFILE' && styles.tabBarItemActive]} 
+          style={[styles.tabItem, activeTab === 'PROFILE' && styles.tabItemActive]} 
           onPress={() => setActiveTab('PROFILE')}
         >
-          <Text style={[styles.tabBarIcon, activeTab === 'PROFILE' && styles.tabBarTextActive]}>👤</Text>
-          <Text style={[styles.tabBarLabel, activeTab === 'PROFILE' && styles.tabBarTextActive]}>PROFIL</Text>
+          <User size={22} color={activeTab === 'PROFILE' ? '#ffffff' : '#737373'} />
+          <Text style={[activeTab === 'PROFILE' ? styles.tabLabelActive : styles.tabLabel]}>PROFIL</Text>
         </TouchableOpacity>
+
       </View>
 
     </SafeAreaView>
@@ -450,43 +590,145 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#262626',
   },
-  brandGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   brandTitle: {
     color: '#ffffff',
     fontWeight: '900',
-    fontSize: 16,
+    fontSize: 15,
     letterSpacing: 2,
   },
-  bankrollBadge: {
+  bankrollTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#171717',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#333333',
-    alignItems: 'flex-end',
+    borderColor: '#262626',
   },
-  bankrollLabel: {
-    color: '#737373',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  bankrollValue: {
-    color: '#ffffff',
+  bankrollText: {
+    color: '#e5e5e5',
     fontWeight: '900',
     fontSize: 12,
   },
-  gameContent: {
+  mainContent: {
     flex: 1,
   },
-  tableOvalFrame: {
+  
+  /* HOME STYLES */
+  homeScroll: {
+    padding: 16,
+    gap: 20,
+  },
+  homeHeroCard: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  heroLabel: {
+    color: '#737373',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  heroCredits: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: '900',
+    marginVertical: 8,
+  },
+  heroPlayBtn: {
+    backgroundColor: '#e11d48',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#f43f5e',
+  },
+  heroPlayBtnText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  historySection: {
+    gap: 10,
+  },
+  sectionTitle: {
+    color: '#737373',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#121212',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  historyRowWin: {
+    borderColor: '#15803d',
+    backgroundColor: '#052e16',
+  },
+  historyRowLoss: {
+    borderColor: '#991b1b',
+    backgroundColor: '#450a0a',
+  },
+  historyRowPush: {
+    borderColor: '#262626',
+    backgroundColor: '#171717',
+  },
+  historyLeft: {
+    gap: 2,
+  },
+  historyRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  historyTypeBadge: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  historyScoreText: {
+    color: '#d4d4d4',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  historyAmountText: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  historyDateText: {
+    color: '#737373',
+    fontSize: 9,
+  },
+  textGreen: { color: '#4ade80' },
+  textRed: { color: '#f87171' },
+  textGray: { color: '#a3a3a3' },
+
+  /* GAME STYLES */
+  gameContainer: {
+    flex: 1,
+  },
+  tableFrame: {
     flex: 1,
     margin: 12,
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: '#262626',
     backgroundColor: '#0d0d0d',
@@ -494,7 +736,7 @@ const styles = StyleSheet.create({
   },
   tableInnerFelt: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#1c1c1c',
     backgroundColor: '#111111',
@@ -505,22 +747,15 @@ const styles = StyleSheet.create({
   },
   tableCenterMarking: {
     position: 'absolute',
-    top: '38%',
+    top: '42%',
     alignItems: 'center',
-    opacity: 0.25,
+    opacity: 0.2,
   },
   tableArcText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
-  },
-  tableSubArcText: {
-    color: '#a3a3a3',
-    fontSize: 7,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginTop: 4,
   },
   handSection: {
     alignItems: 'center',
@@ -537,13 +772,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
   },
-  scoreTag: {
+  scoreBadge: {
     backgroundColor: '#262626',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  scoreTagText: {
+  scoreBadgeText: {
     color: '#ffffff',
     fontWeight: '900',
     fontSize: 10,
@@ -553,8 +788,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardFront: {
-    width: 60,
-    height: 88,
+    width: 58,
+    height: 84,
     backgroundColor: '#ffffff',
     borderRadius: 8,
     alignItems: 'center',
@@ -563,49 +798,33 @@ const styles = StyleSheet.create({
     borderColor: '#d4d4d4',
   },
   cardBack: {
-    width: 60,
-    height: 88,
+    width: 58,
+    height: 84,
     backgroundColor: '#991b1b',
     borderRadius: 8,
     padding: 3,
     borderWidth: 1.5,
     borderColor: '#e5e5e5',
   },
-  cardBackPattern: {
+  cardBackInner: {
     flex: 1,
     backgroundColor: '#7f1d1d',
     borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#fca5a5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardBackSymbol: {
     color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  cardRankRed: {
-    color: '#dc2626',
-    fontWeight: '900',
-    fontSize: 20,
-  },
-  cardSuitRed: {
-    color: '#dc2626',
     fontSize: 18,
-  },
-  cardRankBlack: {
-    color: '#171717',
     fontWeight: '900',
-    fontSize: 20,
   },
-  cardSuitBlack: {
-    color: '#171717',
-    fontSize: 18,
-  },
+  cardRankRed: { color: '#dc2626', fontWeight: '900', fontSize: 18 },
+  cardSuitRed: { color: '#dc2626', fontSize: 16 },
+  cardRankBlack: { color: '#171717', fontWeight: '900', fontSize: 18 },
+  cardSuitBlack: { color: '#171717', fontSize: 16 },
   emptyCardSlot: {
     width: 120,
-    height: 88,
+    height: 84,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#262626',
@@ -631,7 +850,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 1,
   },
-  bettingControlPanel: {
+  gameControlsPanel: {
     backgroundColor: '#0a0a0a',
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -681,38 +900,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 10,
   },
-  stackedChipsContainer: {
-    minHeight: 46,
-    justifyContent: 'center',
+  stackedChipsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'center',
+    minHeight: 46,
   },
   noChipsHint: {
     color: '#404040',
     fontSize: 11,
     fontStyle: 'italic',
   },
-  stackedChipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   chipBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginVertical: 10,
   },
   casinoChip: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 3,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 3,
-    elevation: 3,
   },
   chipInnerRing: {
     width: 36,
@@ -724,9 +934,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipCenterCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#0a0a0a',
     alignItems: 'center',
     justifyContent: 'center',
@@ -750,58 +960,147 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
+
+  /* PROFILE STYLES */
+  profileScroll: {
+    padding: 16,
+  },
+  profileMenuContainer: {
+    gap: 16,
+  },
+  profileHeaderCard: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#262626',
+    borderWidth: 1,
+    borderColor: '#404040',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  profileUsername: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  profileLevelText: {
+    color: '#a3a3a3',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  menuOptionsGroup: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  menuOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f1f1f',
+  },
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optionLabel: {
+    color: '#e5e5e5',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  subSectionContainer: {
+    gap: 12,
+  },
+  backToProfileBtn: {
+    backgroundColor: '#262626',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  backToProfileText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 11,
+  },
+  subCard: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  subTitle: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  subText: {
+    color: '#a3a3a3',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  /* BOTTOM TAB BAR (3 BOUTONS: BOUTIQUE, ACCUEIL, PROFIL) */
   bottomTabBar: {
     flexDirection: 'row',
     backgroundColor: '#121212',
     borderTopWidth: 1,
     borderTopColor: '#262626',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  tabBarItem: {
+  tabItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 4,
   },
-  tabBarItemActive: {
-    borderTopWidth: 2,
-    borderTopColor: '#e11d48',
+  tabItemActive: {
+    opacity: 1,
   },
-  tabBarIcon: {
-    fontSize: 16,
-    color: '#525252',
+  tabItemDisabled: {
+    opacity: 0.35,
   },
-  tabBarLabel: {
+  tabLabel: {
+    color: '#737373',
     fontSize: 9,
     fontWeight: '900',
-    color: '#525252',
-    marginTop: 2,
     letterSpacing: 1,
+    marginTop: 3,
   },
-  tabBarTextActive: {
+  tabLabelActive: {
     color: '#ffffff',
-  },
-  subPageContent: {
-    padding: 20,
-  },
-  subPageTitle: {
-    color: '#ffffff',
+    fontSize: 9,
     fontWeight: '900',
-    fontSize: 16,
     letterSpacing: 1,
-    marginBottom: 16,
+    marginTop: 3,
   },
-  subPageCard: {
-    backgroundColor: '#121212',
-    borderWidth: 1,
-    borderColor: '#262626',
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  subCardLabel: {
-    color: '#a3a3a3',
-    fontSize: 13,
-    fontWeight: '700',
+  tabLabelDisabled: {
+    color: '#404040',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 3,
   },
 });
 
