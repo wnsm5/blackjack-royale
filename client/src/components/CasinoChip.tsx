@@ -8,44 +8,38 @@ interface CasinoChipProps {
 }
 
 const CHIP_STYLES: Record<string, { bg: string; border: string; ring: string; text: string }> = {
-  '25': {
-    bg: 'from-emerald-700 via-emerald-600 to-emerald-900',
-    border: 'border-emerald-300',
-    ring: 'ring-emerald-200/40',
-    text: 'text-emerald-100',
-  },
-  '50': {
-    bg: 'from-blue-700 via-blue-600 to-blue-900',
-    border: 'border-blue-300',
-    ring: 'ring-blue-200/40',
-    text: 'text-blue-100',
-  },
-  '100': {
-    bg: 'from-slate-900 via-slate-800 to-black',
+  '1': {
+    bg: 'from-slate-700 via-slate-600 to-slate-900',
     border: 'border-slate-300',
-    ring: 'ring-slate-100/40',
+    ring: 'ring-slate-200/40',
     text: 'text-slate-100',
   },
-  '250': {
-    bg: 'from-purple-700 via-purple-600 to-purple-950',
-    border: 'border-purple-300',
-    ring: 'ring-purple-200/40',
-    text: 'text-purple-100',
-  },
-  '500': {
+  '2': {
     bg: 'from-rose-700 via-rose-600 to-rose-950',
     border: 'border-rose-300',
     ring: 'ring-rose-200/40',
     text: 'text-rose-100',
   },
-  '1000': {
+  '5': {
+    bg: 'from-emerald-700 via-emerald-600 to-emerald-900',
+    border: 'border-emerald-300',
+    ring: 'ring-emerald-200/40',
+    text: 'text-emerald-100',
+  },
+  '10': {
+    bg: 'from-blue-700 via-blue-600 to-blue-900',
+    border: 'border-blue-300',
+    ring: 'ring-blue-200/40',
+    text: 'text-blue-100',
+  },
+  '20': {
     bg: 'from-amber-600 via-yellow-500 to-amber-800',
     border: 'border-amber-200',
     ring: 'ring-yellow-100/50',
     text: 'text-amber-200 font-extrabold',
   },
   'MAX': {
-    bg: 'from-red-600 via-rose-500 to-pink-900',
+    bg: 'from-purple-600 via-indigo-500 to-pink-900',
     border: 'border-white',
     ring: 'ring-white/50',
     text: 'text-white font-black tracking-wider',

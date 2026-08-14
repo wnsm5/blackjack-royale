@@ -87,7 +87,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
   return {
     gameState: null,
-    currentBet: 100,
+    currentBet: 10,
     isLoading: false,
     isDealerAnimating: false,
     error: null,

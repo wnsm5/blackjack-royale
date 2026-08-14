@@ -149,8 +149,8 @@ export class ProfileService {
       throw new Error('Le secours bankroll est disponible uniquement lorsque votre solde est à 0.');
     }
 
-    const failsafeAmount = 1000;
-    const balanceBefore = 0;
+    const failsafeAmount = 100;
+    const balanceBefore = profile.credits;
     const balanceAfter = failsafeAmount;
 
     await prisma.$transaction([
@@ -170,6 +170,7 @@ export class ProfileService {
     ]);
 
     return {
+      message: 'Recharge de secours effectuée',
       claimedAmount: failsafeAmount,
       newBalance: balanceAfter,
     };

@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { Play, Minus, Plus, Coins, RotateCcw } from 'lucide-react';
 import { CasinoChip } from './CasinoChip';
 
-const CHIP_VALUES = [25, 50, 100, 500, 1000];
+const CHIP_VALUES = [1, 2, 5, 10, 20];
 
 export const BettingPanel: React.FC = () => {
   const { currentBet, setBet, createGame, isLoading } = useGameStore();

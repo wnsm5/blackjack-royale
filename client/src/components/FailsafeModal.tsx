@@ -40,7 +40,7 @@ export const FailsafeModal: React.FC<FailsafeModalProps> = ({ isOpen, onClose })
           Votre Bankroll est à 0 !
         </h3>
         <p className="text-xs text-slate-300 leading-relaxed">
-          Pas de panique ! Récupérez immédiatement 1 000 crédits virtuels gratuits pour vous remettre en jeu.
+          Pas de panique ! Récupérez immédiatement 100 crédits virtuels gratuits pour vous remettre en jeu.
         </p>
 
         {error && (
@@ -55,7 +55,7 @@ export const FailsafeModal: React.FC<FailsafeModalProps> = ({ isOpen, onClose })
             disabled={loading}
             className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm shadow-lg hover:from-emerald-400 transition"
           >
-            {loading ? 'CHARGEMENT...' : 'RECEVOIR 1 000 CRÉDITS'}
+            {loading ? 'CHARGEMENT...' : 'RECEVOIR 100 CRÉDITS'}
           </button>
           <button
             onClick={onClose}

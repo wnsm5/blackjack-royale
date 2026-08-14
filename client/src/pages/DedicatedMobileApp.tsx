@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../stores/useGameStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { CardComponent } from '../components/CardComponent';
@@ -15,38 +15,75 @@ import { ChallengesPage } from './ChallengesPage';
 import { LearnPage } from './LearnPage';
 import { SettingsPage } from './SettingsPage';
 import { 
-  Play, Hand, Layers, ShieldAlert, Flag, Coins, Gift, LifeBuoy, 
+  Play, Hand, Layers, ShieldAlert, Flag, Coins, Gift,
   RotateCcw, Check, X, ArrowLeft, User, BarChart2, History, Award, 
-  GraduationCap, Settings, Target, ChevronRight, Dices, Volume2, VolumeX
+  GraduationCap, Settings, Target, ChevronRight, Dices
 } from 'lucide-react';
 
-const CHIP_VALUES = [25, 50, 100, 250, 500];
+const CHIP_VALUES = [1, 2, 5, 10, 20];
 
 export const DedicatedMobileApp: React.FC = () => {
   const { 
     gameState, error, currentBet, setBet, createGame, 
-    hit, stand, double, split, surrender, insurance, isLoading 
+    hit, stand, double, split, surrender, insurance, isLoading, resetGame
   } = useGameStore();
 
   const { user, profile, logout } = useAuthStore();
 
-  // Navigation tab state: 'HOME' | 'GAME' | 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'CHALLENGES' | 'LEARN' | 'SETTINGS'
-  const [activeTab, setActiveTab] = useState<'HOME' | 'GAME' | 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'CHALLENGES' | 'LEARN' | 'SETTINGS'>('HOME');
-
+  type TabType = 'HOME' | 'GAME' | 'STATS' | 'HISTORY' | 'ACHIEVEMENTS' | 'CHALLENGES' | 'LEARN' | 'SETTINGS';
+  const [activeTab, setActiveTab] = useState<TabType>('HOME');
   const [isDailyOpen, setIsDailyOpen] = useState(false);
   const [isFailsafeOpen, setIsFailsafeOpen] = useState(false);
 
-  // Bet stack state: array of placed chips (e.g. [100, 50, 25])
-  const [betChips, setBetChips] = useState<number[]>(() => [currentBet]);
+  // Bet stack: array of placed chip values
+  const [betChips, setBetChips] = useState<number[]>([]);
+
+  // Table clearing state: show cards briefly after FINISHED then wipe
+  const [showFinishedCards, setShowFinishedCards] = useState(false);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const credits = profile?.credits ?? 0;
   const isPlaying = gameState && gameState.status !== 'FINISHED';
+  const isFinished = gameState?.status === 'FINISHED';
   const activeHand = gameState?.hands[gameState.activeHandIndex];
   const deckRemaining = gameState?.deckRemainingCount ?? 312;
 
-  // Add chip to bet stack
+  // AUTO-RESET: if game errors with 404/already finished, wipe the stuck state
+  useEffect(() => {
+    if (error && gameState) {
+      const isStuck =
+        error.toLowerCase().includes('introuvable') ||
+        error.toLowerCase().includes('not found') ||
+        error.toLowerCase().includes('déjà terminée') ||
+        error.toLowerCase().includes('already finished') ||
+        error.toLowerCase().includes('terminée');
+      if (isStuck) {
+        resetGame();
+        setBetChips([]);
+        setBet(0);
+      }
+    }
+  }, [error]);
+
+  // AUTO-CLEAR TABLE: after FINISHED, wait 2.5s then clear cards
+  useEffect(() => {
+    if (isFinished) {
+      setShowFinishedCards(true);
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = setTimeout(() => {
+        resetGame();
+        setBetChips([]);
+        setBet(0);
+        setShowFinishedCards(false);
+      }, 2500);
+    }
+    return () => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    };
+  }, [isFinished]);
+
   const handleAddChip = (val: number) => {
-    const currentTotal = betChips.reduce((acc, c) => acc + c, 0);
+    const currentTotal = betChips.reduce((a, c) => a + c, 0);
     if (currentTotal + val <= credits) {
       const newChips = [...betChips, val];
       setBetChips(newChips);
@@ -54,28 +91,20 @@ export const DedicatedMobileApp: React.FC = () => {
     }
   };
 
-  // Remove individual chip from bet stack by index
-  const handleRemoveChip = (indexToRemove: number) => {
-    const newChips = betChips.filter((_, idx) => idx !== indexToRemove);
-    const newTotal = newChips.reduce((acc, c) => acc + c, 0);
+  const handleRemoveChip = (idx: number) => {
+    const newChips = betChips.filter((_, i) => i !== idx);
     setBetChips(newChips);
-    setBet(newTotal);
+    setBet(newChips.reduce((a, c) => a + c, 0));
   };
 
-  // Clear bet stack
-  const handleClearChips = () => {
-    setBetChips([]);
-    setBet(0);
-  };
-
-  // Max bet
-  const handleMaxChips = () => {
-    setBetChips([credits]);
-    setBet(credits);
-  };
+  const handleClearChips = () => { setBetChips([]); setBet(0); };
+  const handleMaxChips = () => { setBetChips([credits]); setBet(credits); };
 
   return (
-    <div className="fixed inset-0 w-screen h-[100dvh] bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans">
+    <div
+      className="fixed inset-0 w-screen text-slate-100 flex flex-col overflow-hidden select-none font-sans bg-slate-950"
+      style={{ height: '100dvh' }}
+    >
       
       {/* ==============================================================
           NAVIGATION VIEW BIFURCATION: SUBCATEGORY VIEWS VS HOME VS GAME
@@ -504,43 +533,50 @@ export const DedicatedMobileApp: React.FC = () => {
                 )}
               </div>
             ) : (
-              /* BETTING PANEL WITH VISUAL PLACED CHIPS STACK & INTERACTIVE SUBTRACTION */
-              <div className="flex flex-col gap-2.5 w-full">
+              /* BETTING PANEL WITH 3D STACKED CASINO CHIPS & INTERACTIVE SUBTRACTION */
+              <div className="flex flex-col gap-2 w-full">
                 
-                {/* VISUAL STACK OF PLACED CHIPS ON THE BETTING SPOT */}
-                <div className="flex flex-col items-center gap-1 w-full bg-slate-900/90 border border-amber-500/30 p-2 rounded-2xl">
-                  <div className="flex items-center justify-between w-full px-2">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Mise placée (Appuyez sur un jeton pour le retirer)
+                {/* 3D CASINO BETTING SPOT WITH STACKED CHIPS */}
+                <div className="flex flex-col items-center justify-center gap-1 w-full bg-slate-900/90 border border-amber-500/40 p-2.5 rounded-2xl relative shadow-inner">
+                  <div className="flex items-center justify-between w-full px-1">
+                    <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">
+                      Mise: {currentBet} CR
                     </span>
-                    <button
-                      onClick={handleClearChips}
-                      className="text-[10px] font-bold text-rose-400 hover:underline flex items-center gap-0.5"
-                    >
-                      <RotateCcw size={12} /> Réinitialiser
-                    </button>
+                    {betChips.length > 0 && (
+                      <button
+                        onClick={handleClearChips}
+                        className="text-[10px] font-bold text-rose-400 hover:underline flex items-center gap-0.5"
+                      >
+                        <RotateCcw size={12} /> Effacer
+                      </button>
+                    )}
                   </div>
 
-                  {/* Interactively Placed Chips Array */}
-                  <div className="flex flex-wrap items-center justify-center gap-1.5 min-h-[44px] py-1 w-full">
+                  {/* 3D Stacked Chips Display */}
+                  <div className="flex items-center justify-center min-h-[52px] py-1 w-full relative">
                     {betChips.length === 0 ? (
-                      <span className="text-xs text-slate-500 italic">Aucun jeton placé</span>
+                      <div className="w-14 h-14 rounded-full border-2 border-dashed border-amber-500/30 flex items-center justify-center text-[10px] text-amber-400/50 font-bold">
+                        MISE
+                      </div>
                     ) : (
-                      betChips.map((chipVal, index) => (
-                        <div
-                          key={`${chipVal}_${index}`}
-                          onClick={() => handleRemoveChip(index)}
-                          className="transform transition hover:scale-110 active:scale-90 cursor-pointer"
-                          title="Cliquez pour retirer ce jeton"
-                        >
-                          <CasinoChip value={chipVal} size="sm" />
-                        </div>
-                      ))
+                      <div className="flex items-center justify-center -space-x-4 overflow-x-auto max-w-full px-2 py-1">
+                        {betChips.map((chipVal, index) => (
+                          <div
+                            key={`${chipVal}_${index}`}
+                            onClick={() => handleRemoveChip(index)}
+                            className="transform transition-all duration-200 hover:-translate-y-1 hover:z-30 active:scale-90 cursor-pointer relative shrink-0 shadow-lg"
+                            style={{ zIndex: index + 1 }}
+                            title="Toucher pour retirer"
+                          >
+                            <CasinoChip value={chipVal} size="sm" />
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* CHIP SELECTOR BAR */}
+                {/* CHIP SELECTOR BAR (1, 2, 5, 10, 20, MAX) */}
                 <div className="flex justify-between items-center gap-1 w-full">
                   {CHIP_VALUES.map((val) => (
                     <CasinoChip

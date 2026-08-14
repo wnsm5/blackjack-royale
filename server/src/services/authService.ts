@@ -23,7 +23,7 @@ export class AuthService {
         isGuest: false,
         profile: {
           create: {
-            credits: 10000,
+            credits: 100,
             level: 1,
             xp: 0,
           },
@@ -40,9 +40,9 @@ export class AuthService {
       data: {
         userId: user.id,
         type: 'BONUS',
-        amount: 10000,
+        amount: 100,
         balanceBefore: 0,
-        balanceAfter: 10000,
+        balanceAfter: 100,
       },
     });
 
@@ -88,7 +88,7 @@ export class AuthService {
         isGuest: true,
         profile: {
           create: {
-            credits: 10000,
+            credits: 100,
             level: 1,
             xp: 0,
           },
