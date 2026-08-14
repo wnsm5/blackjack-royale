@@ -294,7 +294,7 @@ function App() {
 
   // Page Transition Animations
   const tabFadeAnim = useRef(new Animated.Value(1)).current;
-  const subSectionAnim = useRef(new Animated.Value(1)).current;
+  const subSectionSlideAnim = useRef(new Animated.Value(250)).current;
 
   // Leave confirmation modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -345,19 +345,27 @@ function App() {
     });
   };
 
-  // Handle Sub-Section Change with Animation
-  const changeSubSection = (section) => {
-    Animated.timing(subSectionAnim, {
+  // Handle Opening Sub-Section with Slide Up Animation
+  const openSubSection = (section) => {
+    setProfileSubSection(section);
+    subSectionSlideAnim.setValue(250);
+    Animated.timing(subSectionSlideAnim, {
       toValue: 0,
-      duration: 120,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Handle Closing Sub-Section with Slide Down Animation
+  const closeSubSection = () => {
+    Animated.timing(subSectionSlideAnim, {
+      toValue: 250,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      setProfileSubSection(section);
-      Animated.timing(subSectionAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      setProfileSubSection(null);
     });
   };
 
@@ -848,7 +856,7 @@ function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       {/* HEADER DE TABLE SEULEMENT EN JEU */}
       {activeTab === 'GAME' && (
@@ -1126,16 +1134,16 @@ function App() {
           </View>
         )}
 
-        {/* TAB 3: PROFIL ENRICHI */}
+        {/* TAB 3: PROFIL (NOIR PUR OLED, GRILLE DE TUILES, SOUS-SECTIONS ANIMÉES SLIDE UP/DOWN) */}
         {activeTab === 'PROFILE' && (
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: '#000000' }}>
             
-            {/* EN-TÊTE FIXE (AVEC APERÇU DE DOS DE CARTE SEULEMENT DANS L'ONGLET CARDBACKS) */}
+            {/* EN-TÊTE FIXE (APERÇU DOS DE CARTE SEULEMENT SI PROFILE SUB-SECTION === CARDBACKS) */}
             {profileSubSection && (
               <View style={styles.stickySubHeaderBar}>
                 <TouchableOpacity 
                   style={styles.stickyBackBtnIconOnly} 
-                  onPress={() => changeSubSection(null)}
+                  onPress={closeSubSection}
                   activeOpacity={0.7}
                 >
                   <ChevronLeft size={22} color="#ffffff" />
@@ -1151,7 +1159,13 @@ function App() {
 
             <ScrollView contentContainerStyle={styles.profileScroll}>
               {profileSubSection ? (
-                <Animated.View style={[styles.subSectionContainer, { opacity: subSectionAnim }]}>
+                /* SOUS-SECTIONS AVEC ANIMATION DE GLISSEMENT VERTICAL (SLIDE UP / SLIDE DOWN) */
+                <Animated.View 
+                  style={[
+                    styles.subSectionContainer, 
+                    { transform: [{ translateY: subSectionSlideAnim }] }
+                  ]}
+                >
 
                   {/* 1. STATISTIQUES AVANCÉES COMPLETES */}
                   {profileSubSection === 'STATS' && (
@@ -1328,7 +1342,7 @@ function App() {
                     </View>
                   )}
 
-                  {/* 4. DOS DE CARTES (15 STYLES GÉOMÉTRIQUES DIVERSIFIÉS) */}
+                  {/* 4. DOS DE CARTES (GRILLE COMPACTE: 2 CARTES EN CHEVAUCHEMENT PAR SKIN) */}
                   {profileSubSection === 'CARDBACKS' && (
                     <View style={styles.subCard}>
                       <Text style={styles.subTitle}>DOS DE CARTES (15 DESIGNS)</Text>
@@ -1340,13 +1354,21 @@ function App() {
                             <TouchableOpacity
                               key={skin.id}
                               style={[
-                                styles.bigSkinCardContainer,
-                                isEquipped && styles.bigSkinCardContainerEquipped,
+                                styles.compactSkinHandContainer,
+                                isEquipped && styles.compactSkinHandContainerEquipped,
                               ]}
                               onPress={() => handleEquipCardBack(skin)}
                               activeOpacity={0.85}
                             >
-                              <CardBackVisual skin={skin} width={136} height={196} />
+                              {/* DEUX CARTES EN CHEVAUCHEMENT (50% OVERLAP HAND) */}
+                              <View style={styles.overlappingHandWrapper}>
+                                <View style={styles.cardOverlapBack}>
+                                  <CardBackVisual skin={skin} width={50} height={74} />
+                                </View>
+                                <View style={styles.cardOverlapFront}>
+                                  <CardBackVisual skin={skin} width={50} height={74} />
+                                </View>
+                              </View>
                             </TouchableOpacity>
                           );
                         })}
@@ -1372,15 +1394,15 @@ function App() {
                       <Text style={styles.subTitle}>PARAMÈTRES DU COMPTE</Text>
                       <Text style={styles.subText}>• Pseudo : Offsuit_Player</Text>
                       <Text style={styles.subText}>• Effets sonores : Activé</Text>
-                      <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit</Text>
-                      <Text style={styles.subText}>• Version App : 2.5.0 Standalone Native</Text>
+                      <Text style={styles.subText}>• Thème : Sombre Épuré Offsuit OLED</Text>
+                      <Text style={styles.subText}>• Version App : 2.6.0 Standalone Native</Text>
                     </View>
                   )}
 
                 </Animated.View>
               ) : (
-                /* MENU PROFIL PRINCIPAL */
-                <Animated.View style={[styles.profileMenuContainer, { opacity: subSectionAnim }]}>
+                /* MENU PROFIL EN GRILLE INTERACTIVE DE TUILES MODERNE (2 COLONNES) */
+                <View style={styles.profileMenuContainer}>
                   <View style={styles.profileHeaderCard}>
                     <View style={styles.avatarCircle}>
                       <User size={28} color="#ffffff" />
@@ -1396,56 +1418,59 @@ function App() {
                     </TouchableOpacity>
                   )}
 
-                  <View style={styles.menuOptionsGroup}>
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('STATS')}>
-                      <View style={styles.optionLeft}>
-                        <BarChart2 size={18} color="#a3a3a3" />
-                        <Text style={styles.optionLabel}>Statistiques avancées & Solde</Text>
+                  {/* GRILLE D'ONGLETS / TUILES DE PROFIL (2 COLONNES) */}
+                  <View style={styles.profileTilesGrid}>
+                    
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('STATS')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#311018' }]}>
+                        <BarChart2 size={20} color="#f43f5e" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Statistiques</Text>
+                      <Text style={styles.tileSubtitle}>Graphique & bilans</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CARDBACKS')}>
-                      <View style={styles.optionLeft}>
-                        <Palette size={18} color="#e11d48" />
-                        <Text style={styles.optionLabel}>Dos de Cartes (15 Styles)</Text>
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('CARDBACKS')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#2d1222' }]}>
+                        <Palette size={20} color="#e11d48" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Dos de Cartes</Text>
+                      <Text style={styles.tileSubtitle}>15 styles uniques</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('CHALLENGES')}>
-                      <View style={styles.optionLeft}>
-                        <Flame size={18} color="#f59e0b" />
-                        <Text style={styles.optionLabel}>Défis Quotidiens</Text>
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('CHALLENGES')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#2a1a08' }]}>
+                        <Flame size={20} color="#f59e0b" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Défis Quotidiens</Text>
+                      <Text style={styles.tileSubtitle}>Missions & CR</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('ACHIEVEMENTS')}>
-                      <View style={styles.optionLeft}>
-                        <Award size={18} color="#a3a3a3" />
-                        <Text style={styles.optionLabel}>Succès</Text>
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('ACHIEVEMENTS')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#092716' }]}>
+                        <Award size={20} color="#16a34a" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Succès</Text>
+                      <Text style={styles.tileSubtitle}>Objectifs & jalons</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('LEARN')}>
-                      <View style={styles.optionLeft}>
-                        <HelpCircle size={18} color="#a3a3a3" />
-                        <Text style={styles.optionLabel}>Règles & Stratégie</Text>
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('LEARN')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#0a1d37' }]}>
+                        <HelpCircle size={20} color="#2563eb" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Apprendre</Text>
+                      <Text style={styles.tileSubtitle}>Règles & conseils</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuOptionRow} onPress={() => changeSubSection('SETTINGS')}>
-                      <View style={styles.optionLeft}>
-                        <Settings size={18} color="#a3a3a3" />
-                        <Text style={styles.optionLabel}>Paramètres</Text>
+                    <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('SETTINGS')}>
+                      <View style={[styles.tileIconCircle, { backgroundColor: '#1c1c1c' }]}>
+                        <Settings size={20} color="#a3a3a3" />
                       </View>
-                      <ChevronRight size={16} color="#525252" />
+                      <Text style={styles.tileTitle}>Paramètres</Text>
+                      <Text style={styles.tileSubtitle}>Options du compte</Text>
                     </TouchableOpacity>
+
                   </View>
-                </Animated.View>
+                </View>
               )}
             </ScrollView>
           </View>
@@ -1453,9 +1478,9 @@ function App() {
 
       </Animated.View>
 
-      {/* BARRE EN BAS (ICÔNES SEULEMENT, SANS TEXTE) */}
-      {activeTab !== 'GAME' && (
-        <View style={styles.bottomTabBar}>
+      {/* BARRE EN BAS (MASQUÉE PENDANT LE JEU ET DANS TOUS LES SOUS-ONGLETS DU PROFIL) */}
+      {activeTab !== 'GAME' && profileSubSection === null && (
+        <View style={styles.bottomTabBarTranslucent}>
           <View style={[styles.tabItem, styles.tabItemDisabled]}>
             <ShoppingBag size={22} color="#404040" />
           </View>
@@ -1512,7 +1537,7 @@ function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
@@ -1520,15 +1545,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderBottomWidth: 1,
-    borderBottomColor: '#262626',
+    borderBottomColor: '#1c1c1c',
   },
   leaveHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1545,7 +1570,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#171717',
+    backgroundColor: '#141414',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1563,11 +1588,12 @@ const styles = StyleSheet.create({
   homeScroll: {
     padding: 16,
     gap: 20,
+    backgroundColor: '#000000',
   },
   homeHeroCard: {
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -1636,7 +1662,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 12,
@@ -1651,8 +1677,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#450a0a',
   },
   historyRowPush: {
-    borderColor: '#262626',
-    backgroundColor: '#171717',
+    borderColor: '#1c1c1c',
+    backgroundColor: '#121212',
   },
   historyLeft: {
     gap: 2,
@@ -1686,22 +1712,23 @@ const styles = StyleSheet.create({
   /* GAME STYLES */
   gameContainer: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   tableFrame: {
     flex: 1,
     margin: 12,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#262626',
-    backgroundColor: '#0d0d0d',
+    borderColor: '#1c1c1c',
+    backgroundColor: '#050505',
     padding: 10,
   },
   tableInnerFelt: {
     flex: 1,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1c1c1c',
-    backgroundColor: '#111111',
+    borderColor: '#181818',
+    backgroundColor: '#0d0d0d',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
@@ -1720,7 +1747,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#171717',
+    backgroundColor: '#141414',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1835,7 +1862,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   splitHandBox: {
-    backgroundColor: '#171717',
+    backgroundColor: '#141414',
     padding: 6,
     borderRadius: 10,
     borderWidth: 1,
@@ -1877,11 +1904,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   gameControlsPanel: {
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#000000',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#1f1f1f',
+    borderTopColor: '#1c1c1c',
   },
   actionRowContainer: {
     gap: 8,
@@ -1967,7 +1994,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -1996,7 +2023,7 @@ const styles = StyleSheet.create({
   chipSummaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#171717',
+    backgroundColor: '#141414',
     paddingRight: 8,
     paddingLeft: 4,
     paddingVertical: 3,
@@ -2054,17 +2081,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* PROFILE STYLES */
+  /* PROFILE STYLES (PURE OLED BLACK & TILE GRID) */
   profileScroll: {
     padding: 16,
+    backgroundColor: '#000000',
   },
   profileMenuContainer: {
     gap: 16,
   },
   profileHeaderCard: {
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -2073,9 +2101,9 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     borderWidth: 1,
-    borderColor: '#404040',
+    borderColor: '#333333',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -2091,31 +2119,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
   },
-  menuOptionsGroup: {
-    backgroundColor: '#121212',
-    borderWidth: 1,
-    borderColor: '#262626',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  menuOptionRow: {
+  profileTilesGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f1f1f',
+    gap: 10,
   },
-  optionLeft: {
-    flexDirection: 'row',
+  profileTileCard: {
+    width: '48%',
+    backgroundColor: '#080808',
+    borderWidth: 1,
+    borderColor: '#1c1c1c',
+    borderRadius: 14,
+    padding: 14,
+    gap: 6,
+  },
+  tileIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    marginBottom: 2,
   },
-  optionLabel: {
-    color: '#e5e5e5',
-    fontWeight: '700',
+  tileTitle: {
+    color: '#ffffff',
+    fontWeight: '900',
     fontSize: 13,
+  },
+  tileSubtitle: {
+    color: '#737373',
+    fontSize: 10,
+    fontWeight: '600',
   },
   subSectionContainer: {
     gap: 12,
@@ -2128,19 +2163,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderBottomWidth: 1,
-    borderBottomColor: '#262626',
+    borderBottomColor: '#1c1c1c',
   },
   stickyBackBtnIconOnly: {
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#404040',
+    borderColor: '#333333',
   },
   equippedMiniCardHeaderRight: {
     alignItems: 'center',
@@ -2148,9 +2183,9 @@ const styles = StyleSheet.create({
   },
 
   subCard: {
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -2171,11 +2206,11 @@ const styles = StyleSheet.create({
 
   /* STATISTIQUES AVANCÉES ENRICHIES */
   statsSectionBox: {
-    backgroundColor: '#171717',
+    backgroundColor: '#121212',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     gap: 8,
     marginVertical: 4,
   },
@@ -2217,11 +2252,11 @@ const styles = StyleSheet.create({
   },
   recordCard: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     alignItems: 'center',
   },
   recordLabel: {
@@ -2242,7 +2277,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#262626',
+    borderBottomColor: '#1c1c1c',
   },
   decisionLabel: {
     color: '#a3a3a3',
@@ -2268,11 +2303,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#171717',
+    backgroundColor: '#121212',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
   },
   achievementRowCompleted: {
     flexDirection: 'row',
@@ -2322,11 +2357,11 @@ const styles = StyleSheet.create({
 
   /* DÉFIS QUOTIDIENS */
   challengeCard: {
-    backgroundColor: '#171717',
+    backgroundColor: '#121212',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     gap: 8,
   },
   challengeHeader: {
@@ -2388,7 +2423,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     paddingVertical: 6,
     borderRadius: 6,
   },
@@ -2398,7 +2433,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   inProgressBtn: {
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     paddingVertical: 6,
     borderRadius: 6,
     alignItems: 'center',
@@ -2409,39 +2444,63 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
 
-  /* DOS DE CARTES GRANDE GRILLE 2 COLONNES PUREMENT VISUELLE SANS TEXTE */
+  /* DOS DE CARTES (GRILLE COMPACTE: 2 CARTES EN CHEVAUCHEMENT PAR SKIN) */
   cardSkinsTwoColumnGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
     marginTop: 8,
   },
-  bigSkinCardContainer: {
-    borderRadius: 16,
-    padding: 3,
+  compactSkinHandContainer: {
+    width: '48%',
+    height: 100,
+    backgroundColor: '#050505',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1c1c1c',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  compactSkinHandContainerEquipped: {
+    borderColor: '#e11d48',
     borderWidth: 2,
-    borderColor: 'transparent',
+    backgroundColor: '#14070a',
+    shadowColor: '#e11d48',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  overlappingHandWrapper: {
+    width: 90,
+    height: 74,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bigSkinCardContainerEquipped: {
-    borderColor: '#e11d48',
-    borderRadius: 18,
-    shadowColor: '#e11d48',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
+  cardOverlapBack: {
+    position: 'absolute',
+    left: 8,
+    top: 0,
+    transform: [{ rotate: '-6deg' }],
+  },
+  cardOverlapFront: {
+    position: 'absolute',
+    left: 32,
+    top: 0,
+    transform: [{ rotate: '4deg' }],
   },
 
   /* GRAPHIQUE DU SOLDE */
   chartContainer: {
-    backgroundColor: '#171717',
+    backgroundColor: '#121212',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: '#1c1c1c',
     gap: 10,
     marginVertical: 4,
   },
@@ -2473,12 +2532,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  /* BOTTOM TAB BAR (ICÔNES SEULEMENT, SANS TEXTE) */
-  bottomTabBar: {
+  /* BOTTOM TAB BAR TRANSLUCIDE (ALPHAS / FLOU SUR NOIR OLED) */
+  bottomTabBarTranslucent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    backgroundColor: '#121212',
+    backgroundColor: 'rgba(5, 5, 5, 0.88)',
     borderTopWidth: 1,
-    borderTopColor: '#262626',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
@@ -2497,13 +2560,13 @@ const styles = StyleSheet.create({
   /* LEAVE CONFIRMATION MODAL */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   leaveModalBox: {
-    backgroundColor: '#121212',
+    backgroundColor: '#080808',
     borderWidth: 1,
     borderColor: '#f43f5e',
     borderRadius: 20,
@@ -2532,7 +2595,7 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
-    backgroundColor: '#262626',
+    backgroundColor: '#1c1c1c',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
