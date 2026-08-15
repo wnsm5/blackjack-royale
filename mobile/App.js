@@ -438,18 +438,6 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
               const cardNode = (
                 <View style={styles.rouletteItem}>
                   <CardBackVisual skin={skin} width={ROULETTE_CARD_W} height={ROULETTE_CARD_H} />
-                  <Animated.View
-                    style={[
-                      styles.rouletteLockOverlay,
-                      {
-                        width: ROULETTE_CARD_W,
-                        height: ROULETTE_CARD_H,
-                        opacity: isWinner ? winnerLockFade : 1,
-                      },
-                    ]}
-                  >
-                    <Lock size={18} color="#d4d4d4" />
-                  </Animated.View>
                 </View>
               );
 
@@ -667,6 +655,7 @@ function App() {
   const handleBuyChest = (chest) => {
     if (gems < chest.cost) {
       triggerHaptic(30);
+      setChestDetailChest(null);
       setRewardModalInfo({
         type: 'ERROR',
         title: 'GEMS INSUFFISANTES',
@@ -679,6 +668,7 @@ function App() {
       const lockedPool = cardBackSkins.filter((s) => !s.unlocked);
       if (lockedPool.length === 0) {
         triggerHaptic(30);
+        setChestDetailChest(null);
         setRewardModalInfo({
           type: 'ERROR',
           title: 'COLLECTION COMPLÈTE',
@@ -713,18 +703,11 @@ function App() {
   const handleRouletteComplete = () => {
     if (!cardBackRoulette) return;
     const { winnerId } = cardBackRoulette;
-    const winnerSkin = cardBackSkins.find((s) => s.id === winnerId);
     setCardBackSkins((prev) =>
       prev.map((s) => (s.id === winnerId ? { ...s, unlocked: true } : s))
     );
     setCardBackRoulette(null);
     triggerHaptic(50);
-    setRewardModalInfo({
-      type: 'CHEST',
-      title: 'DOS DÉBLOQUÉ',
-      desc: `${winnerSkin?.name || 'Nouveau design'} est maintenant disponible dans Profil → Dos de Cartes.`,
-      cardBackId: winnerId,
-    });
   };
   
   // Vibration / Haptics State
@@ -825,6 +808,46 @@ function App() {
         } else if (gs.dx > 50) { // Swipe right -> Previous tab
           if (tab === 'PROFILE') changeTabRef.current && changeTabRef.current('HOME');
           else if (tab === 'HOME') changeTabRef.current && changeTabRef.current('SHOP');
+        }
+      },
+    })
+  ).current;
+
+  // Chest Sheet vertical drag animation and PanResponder
+  const chestSheetTranslateY = useRef(new Animated.Value(0)).current;
+  const chestDetailChestRef = useRef(chestDetailChest);
+  useEffect(() => {
+    chestDetailChestRef.current = chestDetailChest;
+    if (chestDetailChest !== null) {
+      chestSheetTranslateY.setValue(0);
+    }
+  }, [chestDetailChest]);
+
+  const chestSheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 8,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) {
+          chestSheetTranslateY.setValue(gs.dy);
+        }
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 120 || gs.vy > 0.8) {
+          Animated.timing(chestSheetTranslateY, {
+            toValue: 600,
+            duration: 220,
+            useNativeDriver: true,
+          }).start(() => {
+            setChestDetailChest(null);
+            chestSheetTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(chestSheetTranslateY, {
+            toValue: 0,
+            bounciness: 4,
+            useNativeDriver: true,
+          }).start();
         }
       },
     })
@@ -2341,7 +2364,13 @@ function App() {
             onPress={() => setChestDetailChest(null)}
           />
           {chestDetailChest && (
-            <View style={styles.chestSheet}>
+            <Animated.View
+              style={[
+                styles.chestSheet,
+                { transform: [{ translateY: chestSheetTranslateY }] },
+              ]}
+              {...chestSheetPanResponder.panHandlers}
+            >
               <View style={styles.chestSheetHandle} />
 
               <View style={styles.chestSheetVisualWrap}>
@@ -2381,7 +2410,7 @@ function App() {
                   <Text style={styles.chestOpenBtnPriceText}>{chestDetailChest.cost}</Text>
                 </View>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           )}
         </View>
       </Modal>
@@ -2504,33 +2533,39 @@ const styles = StyleSheet.create({
   },
   chestsRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     justifyContent: 'space-between',
     gap: 8,
   },
   chestCellCompact: {
     flex: 1,
-    backgroundColor: '#080808',
-    borderRadius: 12,
+    backgroundColor: '#0a0a0a',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1a1a1a',
+    borderColor: '#1c1c1c',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 6,
+    gap: 10,
   },
   chestCellTier: {
-    color: '#a3a3a3',
-    fontSize: 10,
+    color: '#ffffff',
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textAlign: 'center',
   },
   chestCellPrice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   chestCellPriceText: {
     color: '#22c55e',
@@ -2543,28 +2578,28 @@ const styles = StyleSheet.create({
   },
   chestSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
   chestSheet: {
     height: '75%',
-    backgroundColor: '#080808',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    backgroundColor: '#0a0a0a',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: '#1c1c1c',
+    borderColor: '#262626',
     borderBottomWidth: 0,
     paddingHorizontal: 22,
-    paddingTop: 10,
+    paddingTop: 12,
     paddingBottom: 28,
     flexDirection: 'column',
   },
   chestSheetHandle: {
     alignSelf: 'center',
-    width: 36,
+    width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#2a2a2a',
-    marginBottom: 22,
+    backgroundColor: '#333333',
+    marginBottom: 20,
   },
   chestSheetVisualWrap: {
     alignItems: 'center',
@@ -2588,10 +2623,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chestRewardsList: {
-    backgroundColor: '#0d0d0d',
-    borderRadius: 12,
+    backgroundColor: '#121212',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1a1a1a',
+    borderColor: '#1f1f1f',
     paddingVertical: 4,
     marginBottom: 28,
   },
@@ -2602,7 +2637,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#141414',
+    borderBottomColor: '#1a1a1a',
   },
   chestRewardRowLast: {
     borderBottomWidth: 0,
@@ -2616,7 +2651,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chestRewardValue: {
-    color: '#e5e5e5',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -2624,16 +2659,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0a1a0f',
-    borderWidth: 1.5,
-    borderColor: '#22c55e',
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#262626',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
   chestOpenBtnLabel: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
   },
@@ -2644,7 +2679,7 @@ const styles = StyleSheet.create({
   },
   chestOpenBtnPriceText: {
     color: '#22c55e',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
   },
   header: {
