@@ -530,7 +530,9 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
         </Text>
 
         <View style={[styles.rouletteViewport, { width: viewportWidth }]}>
-          <View style={styles.rouletteCenterMarker} pointerEvents="none" />
+          {phase === 'revealed' && (
+            <View style={styles.rouletteCenterMarker} pointerEvents="none" />
+          )}
 
           <Animated.View
             style={{
@@ -620,7 +622,20 @@ function CasinoChip({ value, onPress, size = 36 }) {
       activeOpacity={0.8}
     >
       <View style={[styles.chipInnerRing, { borderColor: chipColors.accent, borderRadius: (size - 6) / 2 }]}>
-        <Text style={[styles.chipValueText, { color: chipColors.text, fontSize: size < 30 ? 9 : 11 }]}>{value}</Text>
+        <Text
+          style={[
+            styles.chipValueText,
+            {
+              color: chipColors.text,
+              fontSize: String(value).length >= 4 ? 7 : String(value).length === 3 ? 8 : size < 30 ? 9 : 11,
+              fontWeight: '900',
+            },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+        >
+          {value}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -1060,7 +1075,6 @@ function App() {
     if (isDealing) return;
     const total = betChips.reduce((a, c) => a + c, 0);
     if (total + val <= credits) {
-      triggerHaptic(12);
       const newChips = [...betChips, val];
       setBetChips(newChips);
       setCurrentBet(total + val);
@@ -1071,7 +1085,6 @@ function App() {
     if (isDealing) return;
     const idx = betChips.indexOf(valToRemove);
     if (idx !== -1) {
-      triggerHaptic(12);
       const newChips = betChips.filter((_, i) => i !== idx);
       setBetChips(newChips);
       setCurrentBet(newChips.reduce((a, c) => a + c, 0));
@@ -1080,7 +1093,6 @@ function App() {
 
   const handleClearChips = () => {
     if (isDealing) return;
-    triggerHaptic(15);
     setBetChips([]);
     setCurrentBet(0);
   };
@@ -1088,7 +1100,6 @@ function App() {
   // MISE MAX
   const handleMaxBet = () => {
     if (isDealing || credits <= 0) return;
-    triggerHaptic(18);
     setCurrentBet(credits);
     setBetChips([credits]);
   };
@@ -1103,7 +1114,6 @@ function App() {
   const handleEquipCardBack = (skin) => {
     if (!skin.unlocked) return;
     setEquippedCardBackId(skin.id);
-    triggerHaptic(12);
   };
 
   // Claim Challenge Reward
@@ -1135,7 +1145,6 @@ function App() {
   // Game Engine - Start Game
   const handleStartGame = () => {
     if (currentBet <= 0 || currentBet > credits || isDealing) return;
-    triggerHaptic(25);
     
     setIsDealing(true);
     setGameResult(null);
@@ -1153,6 +1162,8 @@ function App() {
     const p2 = getRandomCard(true);
     const d2 = getRandomCard(false);
 
+    triggerHaptic(18); // Carte 1 joueur
+
     setGame({
       playerHand: [p1],
       dealerHand: [],
@@ -1167,6 +1178,7 @@ function App() {
     });
 
     setTimeout(() => {
+      triggerHaptic(18); // Carte 1 croupier
       setGame(prev => ({
         ...prev,
         dealerHand: [d1],
@@ -1174,6 +1186,7 @@ function App() {
       }));
 
       setTimeout(() => {
+        triggerHaptic(18); // Carte 2 joueur
         setGame(prev => ({
           ...prev,
           playerHand: [p1, p2],
@@ -1186,6 +1199,7 @@ function App() {
 
           // Natural Blackjack (21 on initial 2 cards deal) -> Immediate win at 3:2 (+1.5x bet)
           if (pScore === 21) {
+            triggerHaptic(18); // Carte 2 croupier retournée
             const d2Revealed = { ...d2, faceUp: true };
             const dScore = calcScore([d1, d2Revealed]);
             const winAmount = Math.floor(currentBet * 2.5); // returns bet + 1.5x bet
@@ -1198,7 +1212,7 @@ function App() {
               dealerScore: dScore,
               status: 'FINISHED',
             }));
-            setGameResult('BLACKJACK ! (PAYÉ 3:2)');
+            setGameResult(`BLACKJACK ! (+${netGain} CR)`);
             setFinancialRecords(prev => ({
               ...prev,
               highestWin: Math.max(prev.highestWin, netGain),
@@ -1214,6 +1228,7 @@ function App() {
             setBalanceHistory(prev => [...prev, credits - currentBet + winAmount]);
             setIsDealing(false);
           } else {
+            triggerHaptic(18); // Carte 2 croupier cachée distribuée
             setGame(prev => ({
               ...prev,
               dealerHand: [d1, d2],
@@ -1230,7 +1245,6 @@ function App() {
   // Take Insurance
   const handleTakeInsurance = () => {
     if (!game || game.status !== 'PLAYING' || hasInsurance || credits < game.bet / 2) return;
-    triggerHaptic(20);
     const insuranceCost = Math.floor(game.bet / 2);
     setCredits(prev => prev - insuranceCost);
     setHasInsurance(true);
@@ -1239,7 +1253,7 @@ function App() {
   // Hit Action
   const handleHit = () => {
     if (!game || game.status !== 'PLAYING' || isDealing) return;
-    triggerHaptic(18);
+    triggerHaptic(18); // Pioche d'une carte
 
     setDecisionStats(prev => ({ ...prev, hits: prev.hits + 1 }));
     setIsDealing(true);
@@ -1287,7 +1301,7 @@ function App() {
         setIsDealing(false);
         if (score > 21) {
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
-          setGameResult('BUST - PERDU !');
+          setGameResult(`BUST - PERDU (-${game.bet} CR)`);
           setFinancialRecords(prev => ({ ...prev, highestLoss: Math.min(prev.highestLoss, -game.bet) }));
           setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: game.bet, payout: -game.bet, score: `BUST (${score})`, date: 'À l\'instant' }, ...prev]);
           setBalanceHistory(prev => [...prev, credits]);
@@ -1299,7 +1313,7 @@ function App() {
   // Double Down Action
   const handleDouble = () => {
     if (!game || game.status !== 'PLAYING' || credits < game.bet || game.playerHand.length !== 2 || isDealing) return;
-    triggerHaptic(25);
+    triggerHaptic(18); // Pioche d'une carte sur double
 
     setDecisionStats(prev => ({ ...prev, doubles: prev.doubles + 1 }));
     setIsDealing(true);
@@ -1324,7 +1338,7 @@ function App() {
       if (pScore > 21) {
         setIsDealing(false);
         setGame(prev => ({ ...prev, status: 'FINISHED' }));
-        setGameResult('DOUBLE BUST - PERDU !');
+        setGameResult(`DOUBLE BUST - PERDU (-${totalBet} CR)`);
         setFinancialRecords(prev => ({ ...prev, highestLoss: Math.min(prev.highestLoss, -totalBet) }));
         setHistory(prev => [{ id: Date.now(), type: 'LOSS', bet: totalBet, payout: -totalBet, score: `BUST (${pScore})`, date: 'À l\'instant' }, ...prev]);
         setBalanceHistory(prev => [...prev, credits - additionalBet]);
@@ -1338,7 +1352,7 @@ function App() {
   const handleSplit = () => {
     if (!game || game.status !== 'PLAYING' || credits < game.bet || game.playerHand.length !== 2 || isDealing) return;
     if (game.playerHand[0].val !== game.playerHand[1].val) return;
-    triggerHaptic(25);
+    triggerHaptic(18); // Distribution des cartes de split
 
     setDecisionStats(prev => ({ ...prev, splits: prev.splits + 1 }));
     setIsDealing(true);
@@ -1370,7 +1384,6 @@ function App() {
   // Stand Action
   const handleStand = () => {
     if (!game || game.status !== 'PLAYING' || isDealing) return;
-    triggerHaptic(18);
 
     setDecisionStats(prev => ({ ...prev, stands: prev.stands + 1 }));
     if (game.isSplit) {
@@ -1401,6 +1414,7 @@ function App() {
       let score = calcScore(currentHand);
       if (score < 17) {
         setTimeout(() => {
+          triggerHaptic(18); // Carte piochée par le croupier
           const nextCard = getRandomCard(true);
           const nextHand = [...currentHand, nextCard];
           setCardsRemaining(prev => Math.max(10, prev - 1));
@@ -1423,21 +1437,22 @@ function App() {
           let finalCredits = credits;
 
           if (finalDScore > 21 || pScore > finalDScore) {
-            result = 'GAGNÉ !';
             type = 'WIN';
             winAmount = betAmount * 2;
+            const netWin = winAmount - betAmount;
             finalCredits += winAmount;
+            result = `GAGNÉ (+${netWin} CR)`;
             setCredits(prev => prev + winAmount);
-            setFinancialRecords(prev => ({ ...prev, highestWin: Math.max(prev.highestWin, winAmount - betAmount) }));
+            setFinancialRecords(prev => ({ ...prev, highestWin: Math.max(prev.highestWin, netWin) }));
           } else if (pScore === finalDScore) {
-            result = 'ÉGALITÉ !';
             type = 'PUSH';
             winAmount = betAmount;
             finalCredits += winAmount;
+            result = 'ÉGALITÉ (0 CR)';
             setCredits(prev => prev + winAmount);
           } else {
-            result = 'PERDU !';
             type = 'LOSS';
+            result = `PERDU (-${betAmount} CR)`;
             setFinancialRecords(prev => ({ ...prev, highestLoss: Math.min(prev.highestLoss, -betAmount) }));
           }
 
@@ -1445,12 +1460,12 @@ function App() {
             const insurancePayout = game.bet;
             setCredits(prev => prev + insurancePayout);
             finalCredits += insurancePayout;
-            result += ' (ASSURANCE PAYÉE !)';
+            result += ' • ASSURANCE (+ ' + insurancePayout + ' CR)';
           }
 
           setGame(prev => ({ ...prev, status: 'FINISHED' }));
           setGameResult(result);
-          setHistory(prev => [{ id: Date.now(), type, bet: betAmount, payout: type === 'WIN' ? +betAmount : type === 'PUSH' ? 0 : -betAmount, score: `${pScore} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
+          setHistory(prev => [{ id: Date.now(), type, bet: betAmount, payout: type === 'WIN' ? +(winAmount - betAmount) : type === 'PUSH' ? 0 : -betAmount, score: `${pScore} vs ${finalDScore}`, date: 'À l\'instant' }, ...prev]);
           setBalanceHistory(prev => [...prev, finalCredits]);
           setIsDealing(false);
         }, 400);
@@ -1498,6 +1513,7 @@ function App() {
       let score = calcScore(currentHand);
       if (score < 17) {
         setTimeout(() => {
+          triggerHaptic(18); // Carte piochée par le croupier en split
           const nextCard = getRandomCard(true);
           const nextHand = [...currentHand, nextCard];
           setCardsRemaining(prev => Math.max(10, prev - 1));
@@ -1608,17 +1624,16 @@ function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
-      {/* HEADER DE TABLE SEULEMENT EN JEU */}
+      {/* HEADER DE TABLE SEULEMENT EN JEU (FOND NOIR PUR, SANS DÉLIMITATION GRISE) */}
       {activeTab === 'GAME' && (
         <View style={styles.header}>
-          <TouchableOpacity style={styles.leaveHeaderBtn} onPress={() => setShowLeaveModal(true)}>
-            <LogOut size={16} color="#f43f5e" />
-            <Text style={styles.leaveHeaderBtnText}>QUITTER LA TABLE</Text>
+          <TouchableOpacity style={styles.leaveHeaderIconBtn} onPress={() => setShowLeaveModal(true)} activeOpacity={0.7}>
+            <LogOut size={18} color="#f43f5e" />
           </TouchableOpacity>
 
-          <View style={styles.bankrollTag}>
-            <Coins size={12} color="#a3a3a3" />
-            <Text style={styles.bankrollText}>{credits} CR</Text>
+          <View style={styles.bankrollPureTag}>
+            <Coins size={14} color="#fbbf24" />
+            <Text style={styles.bankrollPureText}>{credits}</Text>
           </View>
         </View>
       )}
@@ -1630,29 +1645,25 @@ function App() {
             <View style={styles.tableFrame}>
               <View style={styles.tableInnerFelt}>
 
-                {/* PIOCHE DE CARTE: FORMAT 58x84 SOUS LE DÉCOMPTE AVEC SKIN ÉQUIPÉ */}
-                <View style={styles.shoeFullContainer}>
-                  <View style={styles.shoeCountBadge}>
-                    <Layers size={11} color="#a3a3a3" />
-                    <Text style={styles.shoeCountText}>{cardsRemaining} CARTES</Text>
-                  </View>
-                  
-                  <View style={styles.shoeStackWrapper}>
-                    <View style={{ position: 'absolute', top: -4, left: -4 }}>
-                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
-                    </View>
-                    <View style={{ position: 'absolute', top: -2, left: -2 }}>
-                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
-                    </View>
-                    <View style={{ position: 'absolute', top: 0, left: 0 }}>
-                      <CardBackVisual skin={activeCardSkin} width={58} height={84} />
-                    </View>
-                  </View>
-                </View>
-                
-                {/* FILIGRANE TABLE */}
+                {/* FILIGRANE TABLE AVEC PIOCHE COMPACTE AU MILIEU */}
                 <View style={styles.tableCenterMarking}>
                   <Text style={styles.tableArcText}>BLACKJACK PAYS 3 TO 2</Text>
+
+                  {/* PIOCHE DE CARTES AU MILIEU (JUSTE LOGO + NOMBRE) */}
+                  <View style={styles.shoeCenterCompact}>
+                    <View style={styles.shoeStackWrapperMini}>
+                      <View style={{ position: 'absolute', top: -2, left: -2 }}>
+                        <CardBackVisual skin={activeCardSkin} width={36} height={52} />
+                      </View>
+                      <View style={{ position: 'absolute', top: 0, left: 0 }}>
+                        <CardBackVisual skin={activeCardSkin} width={36} height={52} />
+                      </View>
+                    </View>
+                    <View style={styles.shoeCountMiniBadge}>
+                      <Layers size={10} color="#737373" />
+                      <Text style={styles.shoeCountMiniText}>{cardsRemaining}</Text>
+                    </View>
+                  </View>
                 </View>
 
                 {/* CROUPIER */}
@@ -1783,17 +1794,21 @@ function App() {
               ) : (
                 <View style={styles.bettingControls}>
                   <View style={styles.betHeaderRow}>
-                    <Text style={styles.betTotalText}>MISE : {currentBet} CR</Text>
+                    <View style={styles.betAmountCleanRow}>
+                      <Coins size={14} color="#fbbf24" />
+                      <Text style={styles.betAmountCleanText}>{currentBet}</Text>
+                    </View>
                     
                     <View style={styles.betHeaderActions}>
-                      <TouchableOpacity style={styles.maxBetBtn} onPress={handleMaxBet}>
-                        <Maximize2 size={10} color="#f43f5e" />
-                        <Text style={styles.maxBetText}>MISE MAX</Text>
+                      <TouchableOpacity style={styles.soberMaxBetBtn} onPress={handleMaxBet} activeOpacity={0.7}>
+                        <Maximize2 size={11} color="#a3a3a3" />
+                        <Text style={styles.soberMaxBetText}>MAX</Text>
                       </TouchableOpacity>
 
                       {betChips.length > 0 && (
-                        <TouchableOpacity onPress={handleClearChips}>
-                          <Text style={styles.clearBetText}>EFFACER</Text>
+                        <TouchableOpacity style={styles.soberClearBtn} onPress={handleClearChips} activeOpacity={0.7}>
+                          <RotateCcw size={11} color="#737373" />
+                          <Text style={styles.soberClearText}>EFFACER</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1805,7 +1820,16 @@ function App() {
                     ) : (
                       Object.entries(chipCounts).map(([valStr, count]) => {
                         const val = parseInt(valStr);
-                        return (
+                        return count === 1 ? (
+                          <TouchableOpacity
+                            key={val}
+                            style={styles.singleChipWrap}
+                            onPress={() => handleRemoveChip(val)}
+                            activeOpacity={0.7}
+                          >
+                            <CasinoChip value={val} size={28} />
+                          </TouchableOpacity>
+                        ) : (
                           <TouchableOpacity
                             key={val}
                             style={styles.chipSummaryBadge}
@@ -1813,7 +1837,7 @@ function App() {
                             activeOpacity={0.7}
                           >
                             <CasinoChip value={val} size={24} />
-                            {count > 1 && <Text style={styles.chipCountText}>x{count}</Text>}
+                            <Text style={styles.chipCountText}>x{count}</Text>
                           </TouchableOpacity>
                         );
                       })
@@ -1828,10 +1852,10 @@ function App() {
 
                   <TouchableOpacity 
                     style={[styles.dealBtn, (currentBet <= 0 || currentBet > credits || isDealing) && styles.dealBtnDisabled]} 
-                    onPress={handleStartGame}
+                    onPress={handleDeal} 
                     disabled={currentBet <= 0 || currentBet > credits || isDealing}
                   >
-                    <Text style={styles.dealBtnText}>DISTRIBUER ({currentBet} CR)</Text>
+                    <Text style={styles.dealBtnText}>DISTRIBUER</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1863,7 +1887,6 @@ function App() {
               <TouchableOpacity 
                 style={styles.shopRechargeRow} 
                 onPress={() => {
-                  triggerHaptic(20);
                   setGems(prev => prev + 50);
                 }}
                 activeOpacity={0.7}
@@ -1885,7 +1908,6 @@ function App() {
                     key={chest.id}
                     style={styles.chestCellCompact}
                     onPress={() => {
-                      triggerHaptic(12);
                       setChestDetailChest(chest);
                     }}
                     activeOpacity={0.75}
@@ -2884,43 +2906,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#080808',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1c1c1c',
+    paddingVertical: 12,
+    backgroundColor: '#000000',
   },
-  leaveHeaderBtn: {
+  leaveHeaderIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#121212',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bankrollPureTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#1c1c1c',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3a1a1a',
-  },
-  leaveHeaderBtnText: {
-    color: '#f43f5e',
-    fontWeight: '900',
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  bankrollTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#141414',
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#262626',
   },
-  bankrollText: {
-    color: '#e5e5e5',
+  bankrollPureText: {
+    color: '#ffffff',
     fontWeight: '900',
-    fontSize: 12,
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
   mainContent: {
     flex: 1,
@@ -2950,33 +2958,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 32,
     fontWeight: '900',
-    marginVertical: 8,
+    marginVertical: 10,
   },
   heroPlayBtn: {
-    backgroundColor: '#e11d48',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    backgroundColor: '#e11d48',
     width: '100%',
     paddingVertical: 14,
     borderRadius: 14,
     marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#f43f5e',
   },
   heroPlayBtnText: {
     color: '#ffffff',
     fontWeight: '900',
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 1,
   },
   failsafeBtn: {
-    backgroundColor: '#16a34a',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    backgroundColor: '#15803d',
     width: '100%',
     paddingVertical: 14,
     borderRadius: 14,
@@ -3078,8 +3084,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    gap: 8,
-    marginTop: 14,
+    marginTop: 10,
   },
   resetStatsBtnText: {
     color: '#f43f5e',
@@ -3088,64 +3093,54 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sectionTitle: {
-    color: '#737373',
-    fontSize: 11,
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  historyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  historyItem: {
     backgroundColor: '#080808',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  historyRowWin: {
-    borderColor: '#15803d',
-    backgroundColor: '#052e16',
-  },
-  historyRowLoss: {
-    borderColor: '#991b1b',
-    backgroundColor: '#450a0a',
-  },
-  historyRowPush: {
     borderColor: '#1c1c1c',
-    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 6,
   },
-  historyLeft: {
-    gap: 2,
+  historyRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  historyRight: {
-    alignItems: 'flex-end',
-    gap: 2,
+  historyScore: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
   },
-  historyTypeBadge: {
-    fontSize: 11,
+  historyType: {
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
   },
-  historyScoreText: {
-    color: '#d4d4d4',
-    fontSize: 11,
+  historyRowBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyBet: {
+    color: '#525252',
+    fontSize: 10,
     fontWeight: '700',
   },
-  historyAmountText: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  historyDateText: {
-    color: '#737373',
+  historyTime: {
+    color: '#525252',
     fontSize: 9,
+    fontWeight: '500',
   },
-  textGreen: { color: '#4ade80' },
-  textRed: { color: '#f87171' },
-  textGray: { color: '#a3a3a3' },
-
-  /* GAME STYLES */
+  historyPayout: {
+    fontWeight: '900',
+    fontSize: 12,
+  },
   gameContainer: {
     flex: 1,
     backgroundColor: '#000000',
@@ -3170,49 +3165,45 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     position: 'relative',
   },
-  
-  /* PIOCHE 3D FORMAT 58x84 SOUS LE DÉCOMPTE */
-  shoeFullContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 12,
-    zIndex: 10,
-    gap: 6,
-  },
-  shoeCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#141414',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#262626',
-  },
-  shoeCountText: {
-    color: '#e5e5e5',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  shoeStackWrapper: {
-    position: 'relative',
-    width: 58,
-    height: 84,
-  },
-
   tableCenterMarking: {
     position: 'absolute',
-    top: '42%',
+    top: '38%',
     alignItems: 'center',
-    opacity: 0.2,
+    gap: 8,
   },
   tableArcText: {
     color: '#ffffff',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
+    opacity: 0.22,
+  },
+  shoeCenterCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  shoeStackWrapperMini: {
+    position: 'relative',
+    width: 36,
+    height: 52,
+  },
+  shoeCountMiniBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1c1c1c',
+  },
+  shoeCountMiniText: {
+    color: '#a3a3a3',
+    fontSize: 11,
+    fontWeight: '900',
   },
   handSection: {
     alignItems: 'center',
@@ -3243,9 +3234,9 @@ const styles = StyleSheet.create({
   cardsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 84,
+    justifyContent: 'center',
   },
-
-  /* CARD WRAPPER & STYLES (OVERLAPPING CARDS) */
   cardWrapper: {
     width: 58,
     height: 84,
@@ -3282,17 +3273,10 @@ const styles = StyleSheet.create({
   cardSuitRedSmall: { color: '#dc2626', fontSize: 12 },
   cardRankBlackSmall: { color: '#171717', fontWeight: '900', fontSize: 14 },
   cardSuitBlackSmall: { color: '#171717', fontSize: 12 },
-
   emptyCardSlotClean: {
-    width: 120,
+    width: 58,
     height: 84,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#262626',
-    borderStyle: 'dashed',
   },
-
-  /* SPLIT MAINS */
   splitHandsContainer: {
     flexDirection: 'row',
     gap: 10,
@@ -3326,12 +3310,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   resultBanner: {
-    backgroundColor: '#e11d48',
+    backgroundColor: '#1c1c1c',
+    borderColor: '#333333',
+    borderWidth: 1,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   resultBannerText: {
     color: '#ffffff',
@@ -3415,36 +3400,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
-  betTotalText: {
+  betAmountCleanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  betAmountCleanText: {
     color: '#ffffff',
     fontWeight: '900',
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 17,
   },
   betHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
-  maxBetBtn: {
+  soberMaxBetBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#1c1c1c',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: '#121212',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#f43f5e',
+    borderColor: '#262626',
   },
-  maxBetText: {
-    color: '#f43f5e',
+  soberMaxBetText: {
+    color: '#e5e5e5',
     fontWeight: '900',
     fontSize: 10,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  clearBetText: {
-    color: '#f43f5e',
+  soberClearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#121212',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  soberClearText: {
+    color: '#737373',
     fontWeight: '800',
     fontSize: 10,
   },
@@ -3456,10 +3456,14 @@ const styles = StyleSheet.create({
     minHeight: 34,
     marginVertical: 4,
   },
+  singleChipWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chipSummaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#141414',
+    backgroundColor: '#121212',
     paddingRight: 8,
     paddingLeft: 4,
     paddingVertical: 3,
@@ -3516,8 +3520,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
-
-  /* PROFILE STYLES (PURE OLED BLACK & TILE GRID) */
   profileScroll: {
     paddingHorizontal: 16,
     paddingTop: 12,
