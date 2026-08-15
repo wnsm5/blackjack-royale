@@ -1852,7 +1852,7 @@ function App() {
 
                   <TouchableOpacity 
                     style={[styles.dealBtn, (currentBet <= 0 || currentBet > credits || isDealing) && styles.dealBtnDisabled]} 
-                    onPress={handleDeal} 
+                    onPress={handleStartGame} 
                     disabled={currentBet <= 0 || currentBet > credits || isDealing}
                   >
                     <Text style={styles.dealBtnText}>DISTRIBUER</Text>
