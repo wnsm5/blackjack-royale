@@ -1,6 +1,6 @@
 import './polyfill';
 import { registerRootComponent } from 'expo';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import {
   PanResponder,
   TextInput,
   Vibration,
+  Dimensions,
 } from 'react-native';
 import {
   ShoppingBag,
@@ -52,76 +53,175 @@ import {
   Package,
   Gift
 } from 'lucide-react-native';
+import Svg, { Polygon, Line } from 'react-native-svg';
 
 const CHIP_VALUES = [1, 2, 5, 10, 20];
 
 // 15 DOS DE CARTES DE LUXE AVEC MOTIFS GÉOMÉTRIQUES UNIQUE (15 AUTHENTIC VECTOR PATTERNS)
 const INITIAL_CARD_BACKS = [
   { id: 'ROUGE_OFFSUIT', name: 'Offsuit Rouge', bg: '#991b1b', innerBg: '#7f1d1d', border: '#fca5a5', pattern: 'lattice', price: 0, unlocked: true },
-  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', pattern: 'stripes', price: 50, unlocked: true },
-  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', pattern: 'diamonds', price: 100, unlocked: true },
-  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', pattern: 'crosshatch', price: 100, unlocked: true },
-  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', pattern: 'chevron', price: 150, unlocked: true },
-  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', pattern: 'neon_grid', price: 150, unlocked: true },
-  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', pattern: 'radial', price: 200, unlocked: true },
-  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', pattern: 'double_ring', price: 250, unlocked: true },
-  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', pattern: 'hex', price: 250, unlocked: true },
-  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', pattern: 'circuits', price: 300, unlocked: true },
-  { id: 'MARBRE_BLANC', name: 'Marbre Blanc VIP', bg: '#e2e8f0', innerBg: '#cbd5e1', border: '#64748b', pattern: 'marble', price: 300, unlocked: true },
-  { id: 'VELOURS_ROUGE', name: 'Rouge Velours', bg: '#881337', innerBg: '#4c0519', border: '#fecdd3', pattern: 'velvet_damask', price: 350, unlocked: true },
-  { id: 'ROSE_GOLD', name: 'Or Rose Filigrane', bg: '#9f1239', innerBg: '#881337', border: '#fecdd3', pattern: 'rose_gold', price: 350, unlocked: true },
-  { id: 'MIDNIGHT_BLUE', name: 'Midnight Constellation', bg: '#0f172a', innerBg: '#1e293b', border: '#38bdf8', pattern: 'constellation', price: 400, unlocked: true },
-  { id: 'BRONZE_ARMOR', name: 'Bronze Tactique', bg: '#78350f', innerBg: '#451a03', border: '#d97706', pattern: 'bronze_mesh', price: 400, unlocked: true },
+  { id: 'NOIR_CARBONE', name: 'Noir Carbone VIP', bg: '#171717', innerBg: '#262626', border: '#f59e0b', pattern: 'stripes', price: 50, unlocked: false },
+  { id: 'DRAGON_DOR', name: 'Dragon d\'Or', bg: '#b45309', innerBg: '#78350f', border: '#fef08a', pattern: 'diamonds', price: 100, unlocked: false },
+  { id: 'BLEU_ROYAL', name: 'Bleu Royal', bg: '#1d4ed8', innerBg: '#1e40af', border: '#bfdbfe', pattern: 'crosshatch', price: 100, unlocked: false },
+  { id: 'EMERAUDE_VIP', name: 'Émeraude VIP', bg: '#15803d', innerBg: '#166534', border: '#bbf7d0', pattern: 'chevron', price: 150, unlocked: false },
+  { id: 'NEON_RED', name: 'Néon Rouge', bg: '#e11d48', innerBg: '#be123c', border: '#fecdd3', pattern: 'neon_grid', price: 150, unlocked: false },
+  { id: 'AMETHYSTE', name: 'Améthyste', bg: '#7e22ce', innerBg: '#6b21a8', border: '#e9d5ff', pattern: 'radial', price: 200, unlocked: false },
+  { id: 'GOLDEN_ROYALE', name: 'Or Pur Royale', bg: '#ca8a04', innerBg: '#a16207', border: '#fef08a', pattern: 'double_ring', price: 250, unlocked: false },
+  { id: 'SILVER_MATTE', name: 'Argent Mat', bg: '#475569', innerBg: '#334155', border: '#e2e8f0', pattern: 'hex', price: 250, unlocked: false },
+  { id: 'CYBERPUNK', name: 'Cyberpunk 2077', bg: '#0891b2', innerBg: '#0e7490', border: '#f43f5e', pattern: 'circuits', price: 300, unlocked: false },
+  { id: 'MARBRE_BLANC', name: 'Marbre Blanc VIP', bg: '#e2e8f0', innerBg: '#cbd5e1', border: '#64748b', pattern: 'marble', price: 300, unlocked: false },
+  { id: 'VELOURS_ROUGE', name: 'Rouge Velours', bg: '#881337', innerBg: '#4c0519', border: '#fecdd3', pattern: 'velvet_damask', price: 350, unlocked: false },
+  { id: 'ROSE_GOLD', name: 'Or Rose Filigrane', bg: '#9f1239', innerBg: '#881337', border: '#fecdd3', pattern: 'rose_gold', price: 350, unlocked: false },
+  { id: 'MIDNIGHT_BLUE', name: 'Midnight Constellation', bg: '#0f172a', innerBg: '#1e293b', border: '#38bdf8', pattern: 'constellation', price: 400, unlocked: false },
+  { id: 'BRONZE_ARMOR', name: 'Bronze Tactique', bg: '#78350f', innerBg: '#451a03', border: '#d97706', pattern: 'bronze_mesh', price: 400, unlocked: false },
 ];
 
-// GEM LOSANGE AVEC FACETTES GRISES (pas d'emoji, pas de Lucide)
+const ROULETTE_ITEM_WIDTH = 76;
+const ROULETTE_CARD_W = 54;
+const ROULETTE_CARD_H = 80;
+const ROULETTE_WINNER_INDEX = 32;
+
+// GEM HEXAGONE VERTICAL — pointu haut/bas, côtés plats gauche/droite (style Ascendant Valorant)
 function GemDiamond({ size = 16, color = '#22c55e' }) {
-  const s = size;
-  const half = s / 2;
-  const topH = s * 0.35;  // hauteur de la couronne
-  const midH = s * 0.22;  // largeur des côtés du milieu
-  const facetColor = 'rgba(180,180,180,0.35)';
+  const h = size * 1.45;
+  const w = size * 0.68;
+  const sideX = w * 0.16;
+  const shoulderY = h * 0.17;
+  const baseY = h * 0.83;
+
+  const points = [
+    `${w / 2},0`,
+    `${w - sideX},${shoulderY}`,
+    `${w - sideX},${baseY}`,
+    `${w / 2},${h}`,
+    `${sideX},${baseY}`,
+    `${sideX},${shoulderY}`,
+  ].join(' ');
+
   return (
-    <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Ombre portée légère */}
+    <View style={{ width: w, height: h }}>
+      <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <Polygon points={points} fill={color} />
+        <Line
+          x1={w / 2}
+          y1={shoulderY}
+          x2={w / 2}
+          y2={baseY}
+          stroke="rgba(255,255,255,0.24)"
+          strokeWidth={Math.max(0.5, w * 0.035)}
+        />
+        <Line
+          x1={sideX + (w - 2 * sideX) * 0.22}
+          y1={h * 0.42}
+          x2={w - sideX - (w - 2 * sideX) * 0.22}
+          y2={h * 0.42}
+          stroke="rgba(255,255,255,0.14)"
+          strokeWidth={Math.max(0.4, w * 0.028)}
+        />
+      </Svg>
+    </View>
+  );
+}
+
+// VISUEL COFFRE SOBRE (vectoriel pur, sans emoji)
+function ChestVisual({ chest, scale = 1 }) {
+  const w = 46 * scale;
+  const bodyH = 30 * scale;
+  const lidH = 11 * scale;
+  const bandH = Math.max(2, 2.5 * scale);
+  const lockW = 9 * scale;
+  const lockH = 11 * scale;
+
+  return (
+    <View style={{ width: w + 6 * scale, height: bodyH + lidH + 4 * scale, alignItems: 'center', justifyContent: 'flex-end' }}>
       <View style={{
         position: 'absolute',
-        width: s * 0.8,
-        height: s * 0.8,
+        bottom: 0,
+        width: w * 0.82,
+        height: Math.max(3, 3 * scale),
+        backgroundColor: 'rgba(0,0,0,0.45)',
         borderRadius: 2,
-        transform: [{ rotate: '45deg' }],
-        backgroundColor: color,
-        opacity: 0.12,
-        top: s * 0.1,
-        left: s * 0.1,
       }} />
-      {/* Losange principal */}
+
       <View style={{
-        width: s * 0.72,
-        height: s * 0.72,
-        borderRadius: 2,
-        transform: [{ rotate: '45deg' }],
-        backgroundColor: color,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: w,
+        height: bodyH,
+        backgroundColor: chest.bgGlow,
+        borderWidth: 1,
+        borderColor: chest.borderColor,
+        borderBottomLeftRadius: 5 * scale,
+        borderBottomRightRadius: 5 * scale,
         overflow: 'hidden',
       }}>
-        {/* Facette diagonale haut-gauche → bas-droite */}
         <View style={{
           position: 'absolute',
-          width: 1,
-          height: s * 0.9,
-          backgroundColor: facetColor,
-          transform: [{ rotate: '0deg' }],
-          left: '38%',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: bodyH * 0.22,
+          backgroundColor: chest.color,
+          opacity: 0.35,
         }} />
-        {/* Facette horizontale centrale */}
         <View style={{
           position: 'absolute',
-          height: 1,
-          width: s * 0.9,
-          backgroundColor: facetColor,
-          top: '40%',
+          top: bodyH * 0.36,
+          left: 0,
+          right: 0,
+          height: bandH,
+          backgroundColor: chest.borderColor,
+          opacity: 0.55,
+        }} />
+        <View style={{
+          position: 'absolute',
+          top: bodyH * 0.3,
+          alignSelf: 'center',
+          width: lockW,
+          height: lockH,
+          backgroundColor: '#141414',
+          borderWidth: 1,
+          borderColor: chest.borderColor,
+          borderRadius: 2 * scale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <View style={{
+            width: Math.max(2, 2.5 * scale),
+            height: Math.max(2, 2.5 * scale),
+            borderRadius: Math.max(1, 1.2 * scale),
+            backgroundColor: '#050505',
+          }} />
+        </View>
+      </View>
+
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        width: w + 5 * scale,
+        height: lidH,
+        backgroundColor: chest.color,
+        borderWidth: 1,
+        borderColor: chest.borderColor,
+        borderTopLeftRadius: 6 * scale,
+        borderTopRightRadius: 6 * scale,
+      }}>
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 5 * scale,
+          right: 5 * scale,
+          height: Math.max(1, 1.5 * scale),
+          backgroundColor: chest.borderColor,
+          opacity: 0.45,
+        }} />
+        <View style={{
+          position: 'absolute',
+          top: lidH * 0.28,
+          alignSelf: 'center',
+          width: w * 0.55,
+          height: Math.max(1, 1.2 * scale),
+          backgroundColor: chest.borderColor,
+          opacity: 0.3,
+          borderRadius: 1,
         }} />
       </View>
     </View>
@@ -224,6 +324,179 @@ function CardBackVisual({ skin, width = 58, height = 84 }) {
         </View>
       </View>
     </View>
+  );
+}
+
+function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete }) {
+  const scrollAnim = useRef(new Animated.Value(0)).current;
+  const winnerLockFade = useRef(new Animated.Value(1)).current;
+  const winnerScale = useRef(new Animated.Value(1)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+  const [phase, setPhase] = useState('spinning');
+
+  const winnerSkin = cardBackSkins.find((s) => s.id === winnerId);
+  const viewportWidth = Dimensions.get('window').width - 48;
+
+  const strip = useMemo(() => {
+    if (!winnerId || !winnerSkin) return [];
+    const items = [];
+    const total = ROULETTE_WINNER_INDEX + 6;
+    for (let i = 0; i < total; i++) {
+      if (i === ROULETTE_WINNER_INDEX) {
+        items.push(winnerSkin);
+      } else {
+        items.push(cardBackSkins[Math.floor(Math.random() * cardBackSkins.length)]);
+      }
+    }
+    return items;
+  }, [winnerId, cardBackSkins, winnerSkin]);
+
+  const targetOffset = useMemo(() => {
+    const extraSpins = cardBackSkins.length * 3 * ROULETTE_ITEM_WIDTH;
+    return extraSpins + ROULETTE_WINNER_INDEX * ROULETTE_ITEM_WIDTH - (viewportWidth / 2) + ROULETTE_ITEM_WIDTH / 2;
+  }, [cardBackSkins.length, viewportWidth]);
+
+  useEffect(() => {
+    if (!visible || !winnerId) return;
+
+    setPhase('spinning');
+    scrollAnim.setValue(0);
+    winnerLockFade.setValue(1);
+    winnerScale.setValue(1);
+    glowOpacity.setValue(0);
+
+    const vw = Dimensions.get('window').width - 48;
+    const offset = cardBackSkins.length * 3 * ROULETTE_ITEM_WIDTH
+      + ROULETTE_WINNER_INDEX * ROULETTE_ITEM_WIDTH
+      - (vw / 2)
+      + ROULETTE_ITEM_WIDTH / 2;
+
+    const anim = Animated.timing(scrollAnim, {
+      toValue: offset,
+      duration: 4500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+
+    anim.start(({ finished }) => {
+      if (!finished) return;
+      setPhase('revealed');
+      Animated.parallel([
+        Animated.timing(winnerLockFade, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(winnerScale, {
+            toValue: 1.18,
+            duration: 350,
+            easing: Easing.out(Easing.back(1.4)),
+            useNativeDriver: true,
+          }),
+          Animated.timing(winnerScale, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(glowOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+
+    return () => anim.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, winnerId]);
+
+  if (!visible || !winnerSkin) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={() => {}}>
+      <View style={styles.rouletteOverlay}>
+        <Text style={styles.rouletteTitle}>ROULETTE DES DOS</Text>
+        <Text style={styles.rouletteSubtitle}>
+          {phase === 'spinning' ? 'Ouverture en cours…' : 'Nouveau dos débloqué !'}
+        </Text>
+
+        <View style={[styles.rouletteViewport, { width: viewportWidth }]}>
+          <View style={styles.rouletteCenterMarker} pointerEvents="none" />
+
+          <Animated.View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              transform: [{ translateX: Animated.multiply(scrollAnim, -1) }],
+            }}
+          >
+            {strip.map((skin, idx) => {
+              const isWinner = idx === ROULETTE_WINNER_INDEX;
+              const cardNode = (
+                <View style={styles.rouletteItem}>
+                  <CardBackVisual skin={skin} width={ROULETTE_CARD_W} height={ROULETTE_CARD_H} />
+                  <Animated.View
+                    style={[
+                      styles.rouletteLockOverlay,
+                      {
+                        width: ROULETTE_CARD_W,
+                        height: ROULETTE_CARD_H,
+                        opacity: isWinner ? winnerLockFade : 1,
+                      },
+                    ]}
+                  >
+                    <Lock size={18} color="#d4d4d4" />
+                  </Animated.View>
+                </View>
+              );
+
+              if (isWinner) {
+                return (
+                  <Animated.View
+                    key={`${skin.id}-${idx}`}
+                    style={[
+                      styles.rouletteItemWrap,
+                      { transform: [{ scale: winnerScale }] },
+                    ]}
+                  >
+                    {cardNode}
+                    <Animated.View
+                      style={[styles.rouletteWinnerGlow, { opacity: glowOpacity }]}
+                      pointerEvents="none"
+                    />
+                  </Animated.View>
+                );
+              }
+
+              return (
+                <View key={`${skin.id}-${idx}`} style={styles.rouletteItemWrap}>
+                  {cardNode}
+                </View>
+              );
+            })}
+          </Animated.View>
+        </View>
+
+        {phase === 'revealed' && (
+          <View style={styles.rouletteResultBox}>
+            <Text style={styles.rouletteResultName}>{winnerSkin.name}</Text>
+            <Text style={styles.rouletteResultHint}>
+              Disponible dans Profil → Dos de Cartes
+            </Text>
+            <TouchableOpacity
+              style={styles.rouletteContinueBtn}
+              onPress={onComplete}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.rouletteContinueBtnText}>CONTINUER</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </Modal>
   );
 }
 
@@ -334,6 +607,8 @@ function App() {
   // Gems Currency State (Default: 0)
   const [gems, setGems] = useState(0);
   const [rewardModalInfo, setRewardModalInfo] = useState(null);
+  const [chestDetailChest, setChestDetailChest] = useState(null);
+  const [cardBackRoulette, setCardBackRoulette] = useState(null);
 
   // User Profile State (Default: user_XXXX with random digits)
   const [username, setUsername] = useState(() => `user_${Math.floor(1000 + Math.random() * 9000)}`);
@@ -345,38 +620,47 @@ function App() {
     {
       id: 'BRONZE',
       name: 'Coffre Bronze',
+      tierName: 'Bronze',
       cost: 50,
-      color: '#cd7f32',
-      borderColor: '#b45309',
-      bgGlow: '#1c1308',
-      desc: '+250 à 600 CRÉDITS',
+      color: '#a16207',
+      borderColor: '#854d0e',
+      bgGlow: '#1a1208',
       minCredits: 250,
       maxCredits: 600,
-      badgeText: 'BOOST 50 GEMS',
+      rewards: [
+        { label: 'Crédits', value: '250 – 600 CR' },
+        { label: 'Dos de carte', value: 'Non' },
+      ],
     },
     {
       id: 'ARGENT',
       name: 'Coffre Épique',
+      tierName: 'Épique',
       cost: 100,
-      color: '#38bdf8',
-      borderColor: '#0284c7',
-      bgGlow: '#081d2c',
-      desc: '+650 à 1500 CRÉDITS',
-      minCredits: 650,
-      maxCredits: 1500,
-      badgeText: 'ÉPIQUE 100 GEMS',
+      color: '#64748b',
+      borderColor: '#475569',
+      bgGlow: '#0f1419',
+      minCredits: 0,
+      maxCredits: 0,
+      rewards: [
+        { label: 'Crédits', value: '0 CR' },
+        { label: 'Dos de carte aléatoire', value: '1 garanti' },
+      ],
     },
     {
       id: 'OR',
       name: 'Coffre Légendaire',
+      tierName: 'Légendaire',
       cost: 150,
-      color: '#fbbf24',
-      borderColor: '#d97706',
-      bgGlow: '#261b05',
-      desc: '+1600 à 4000 CRÉDITS',
+      color: '#ca8a04',
+      borderColor: '#a16207',
+      bgGlow: '#1a1508',
       minCredits: 1600,
       maxCredits: 4000,
-      badgeText: 'LÉGENDAIRE 150 GEMS',
+      rewards: [
+        { label: 'Crédits', value: '1 600 – 4 000 CR' },
+        { label: 'Dos de carte', value: 'Non' },
+      ],
     },
   ];
 
@@ -386,13 +670,34 @@ function App() {
       setRewardModalInfo({
         type: 'ERROR',
         title: 'GEMS INSUFFISANTES',
-        desc: `Il vous manque ${chest.cost - gems} Gems pour débloquer le ${chest.name}.\n\nCliquez sur "Obtenir +50 Gems" ci-dessous pour faire le plein !`,
+        desc: `Il vous manque ${chest.cost - gems} Gems pour ouvrir ce coffre.\n\nUtilisez la recharge quotidienne pour en obtenir.`,
       });
       return;
     }
 
+    if (chest.id === 'ARGENT') {
+      const lockedPool = cardBackSkins.filter((s) => !s.unlocked);
+      if (lockedPool.length === 0) {
+        triggerHaptic(30);
+        setRewardModalInfo({
+          type: 'ERROR',
+          title: 'COLLECTION COMPLÈTE',
+          desc: 'Vous possédez déjà tous les dos de cartes disponibles.',
+        });
+        return;
+      }
+    }
+
     triggerHaptic(40);
     setGems(prev => prev - chest.cost);
+    setChestDetailChest(null);
+
+    if (chest.id === 'ARGENT') {
+      const lockedPool = cardBackSkins.filter((s) => !s.unlocked);
+      const winner = lockedPool[Math.floor(Math.random() * lockedPool.length)];
+      setCardBackRoulette({ winnerId: winner.id });
+      return;
+    }
 
     const rewardCredits = Math.floor(chest.minCredits + Math.random() * (chest.maxCredits - chest.minCredits));
     setCredits(prev => prev + rewardCredits);
@@ -400,8 +705,25 @@ function App() {
 
     setRewardModalInfo({
       type: 'CHEST',
-      title: chest.name.toUpperCase(),
-      desc: `RÉCOMPENSE DÉBLOQUÉE !\n\nVous obtenez :\n💰 +${rewardCredits} CRÉDITS !`,
+      title: `COFFRE DE ${chest.tierName.toUpperCase()}`,
+      desc: `Récompense débloquée.\n\n+${rewardCredits} crédits ajoutés à votre solde.`,
+    });
+  };
+
+  const handleRouletteComplete = () => {
+    if (!cardBackRoulette) return;
+    const { winnerId } = cardBackRoulette;
+    const winnerSkin = cardBackSkins.find((s) => s.id === winnerId);
+    setCardBackSkins((prev) =>
+      prev.map((s) => (s.id === winnerId ? { ...s, unlocked: true } : s))
+    );
+    setCardBackRoulette(null);
+    triggerHaptic(50);
+    setRewardModalInfo({
+      type: 'CHEST',
+      title: 'DOS DÉBLOQUÉ',
+      desc: `${winnerSkin?.name || 'Nouveau design'} est maintenant disponible dans Profil → Dos de Cartes.`,
+      cardBackId: winnerId,
     });
   };
   
@@ -644,7 +966,9 @@ function App() {
 
   // Equip / Select Card Back
   const handleEquipCardBack = (skin) => {
+    if (!skin.unlocked) return;
     setEquippedCardBackId(skin.id);
+    triggerHaptic(12);
   };
 
   // Claim Challenge Reward
@@ -1381,20 +1705,18 @@ function App() {
         </View>
       )}
 
-      {/* GEMS EN HAUT À GAUCHE — LOSANGE + CHIFFRE VERT */}
-      {activeTab !== 'GAME' && profileSubSection === null && (
-        <View style={styles.topLeftGemsBar}>
-          <GemDiamond size={18} color="#22c55e" />
-          <Text style={styles.gemsTagText}>{gems}</Text>
-        </View>
-      )}
-
       {/* CONTENU PRINCIPAL (SHOP + HOME + PROFILE): rendu conditionnel + swipe via PanResponder capture */}
       {activeTab !== 'GAME' && (
         <Animated.View
           style={[styles.mainContent, { opacity: tabFadeAnim }]}
           {...swipeTabPanResponder.panHandlers}
         >
+          {profileSubSection === null && (
+            <View style={styles.gemsTopBand}>
+              <GemDiamond size={18} color="#22c55e" />
+              <Text style={styles.gemsTagText}>{gems}</Text>
+            </View>
+          )}
 
           {/* TAB 1: BOUTIQUE */}
           {activeTab === 'SHOP' && (
@@ -1421,21 +1743,22 @@ function App() {
                 <ChevronRight size={16} color="#525252" />
               </TouchableOpacity>
 
-              {/* COFFRES — GRILLE 2 COLONNES (même style que sélection dos de cartes) */}
               <Text style={styles.shopSectionLabel}>COFFRES</Text>
-              <View style={styles.chestsGrid}>
+              <View style={styles.chestsRow}>
                 {CHESTS.map((chest) => (
                   <TouchableOpacity
                     key={chest.id}
-                    style={styles.chestCell}
-                    onPress={() => handleBuyChest(chest)}
-                    activeOpacity={0.8}
+                    style={styles.chestCellCompact}
+                    onPress={() => {
+                      triggerHaptic(12);
+                      setChestDetailChest(chest);
+                    }}
+                    activeOpacity={0.75}
                   >
-                    <GemDiamond size={32} color={chest.color} />
-                    <Text style={styles.chestCellName}>{chest.name}</Text>
-                    <Text style={styles.chestCellDesc}>{chest.desc}</Text>
+                    <ChestVisual chest={chest} scale={0.78} />
+                    <Text style={styles.chestCellTier}>{chest.tierName}</Text>
                     <View style={styles.chestCellPrice}>
-                      <GemDiamond size={11} color="#22c55e" />
+                      <GemDiamond size={10} color="#22c55e" />
                       <Text style={styles.chestCellPriceText}>{chest.cost}</Text>
                     </View>
                   </TouchableOpacity>
@@ -1650,7 +1973,11 @@ function App() {
                             <Text style={styles.achievementDesc}>{ach.desc}</Text>
                           </View>
                           <View style={styles.progressBadge}>
-                            <Text style={styles.progressText}>{ach.current}/{ach.target}</Text>
+                            <Text style={styles.progressText}>
+                              {ach.id === 6
+                                ? `${cardBackSkins.filter((s) => s.unlocked).length}/${ach.target}`
+                                : `${ach.current}/${ach.target}`}
+                            </Text>
                           </View>
                         </View>
                       ))}
@@ -1716,22 +2043,31 @@ function App() {
                   {/* 4. DOS DE CARTES (GRILLE COMPACTE: 2 CARTES EN CHEVAUCHEMENT PAR SKIN) */}
                   {profileSubSection === 'CARDBACKS' && (
                     <View style={styles.subCard}>
-                      <Text style={styles.subTitle}>DOS DE CARTES (15 DESIGNS)</Text>
+                      <Text style={styles.subTitle}>
+                        DOS DE CARTES ({cardBackSkins.filter((s) => s.unlocked).length}/{cardBackSkins.length})
+                      </Text>
+
+                      {cardBackSkins.filter((s) => s.unlocked).length < cardBackSkins.length && (
+                        <Text style={styles.cardBackUnlockHint}>
+                          Débloquez de nouveaux designs via le Coffre Épique
+                        </Text>
+                      )}
 
                       <View style={styles.cardSkinsTwoColumnGrid}>
                         {cardBackSkins.map((skin) => {
                           const isEquipped = equippedCardBackId === skin.id;
+                          const isLocked = !skin.unlocked;
                           return (
                             <TouchableOpacity
                               key={skin.id}
                               style={[
                                 styles.compactSkinHandContainer,
                                 isEquipped && styles.compactSkinHandContainerEquipped,
+                                isLocked && styles.compactSkinHandContainerLocked,
                               ]}
-                              onPress={() => handleEquipCardBack(skin)}
-                              activeOpacity={0.85}
+                              onPress={() => !isLocked && handleEquipCardBack(skin)}
+                              activeOpacity={isLocked ? 1 : 0.85}
                             >
-                              {/* DEUX CARTES EN CHEVAUCHEMENT (50% OVERLAP HAND) */}
                               <View style={styles.overlappingHandWrapper}>
                                 <View style={styles.cardOverlapBack}>
                                   <CardBackVisual skin={skin} width={50} height={74} />
@@ -1740,6 +2076,19 @@ function App() {
                                   <CardBackVisual skin={skin} width={50} height={74} />
                                 </View>
                               </View>
+
+                              {/* Overlay gris cadenas pour les cartes verrouillées */}
+                              {isLocked && (
+                                <View style={styles.lockedSkinOverlay}>
+                                  <Lock size={16} color="#737373" />
+                                </View>
+                              )}
+
+                              {isEquipped && (
+                                <View style={styles.equippedBadge}>
+                                  <Check size={10} color="#ffffff" />
+                                </View>
+                              )}
                             </TouchableOpacity>
                           );
                         })}
@@ -1840,7 +2189,9 @@ function App() {
                         <Palette size={20} color="#e11d48" />
                       </View>
                       <Text style={styles.tileTitle}>Dos de Cartes</Text>
-                      <Text style={styles.tileSubtitle}>15 styles uniques</Text>
+                      <Text style={styles.tileSubtitle}>
+                        {cardBackSkins.filter((s) => s.unlocked).length}/{cardBackSkins.length} débloqués
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.profileTileCard} onPress={() => openSubSection('CHALLENGES')}>
@@ -1976,6 +2327,73 @@ function App() {
         </View>
       </Modal>
 
+      {/* SOUS-MENU DÉTAIL COFFRE (3/4 ÉCRAN) */}
+      <Modal
+        visible={chestDetailChest !== null}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setChestDetailChest(null)}
+      >
+        <View style={styles.chestSheetOverlay}>
+          <TouchableOpacity
+            style={styles.chestSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setChestDetailChest(null)}
+          />
+          {chestDetailChest && (
+            <View style={styles.chestSheet}>
+              <View style={styles.chestSheetHandle} />
+
+              <View style={styles.chestSheetVisualWrap}>
+                <ChestVisual chest={chestDetailChest} scale={1.55} />
+              </View>
+
+              <Text style={styles.chestSheetTitle}>
+                Coffre de {chestDetailChest.tierName}
+              </Text>
+
+              <Text style={styles.chestSheetSectionLabel}>CONTENU POSSIBLE</Text>
+              <View style={styles.chestRewardsList}>
+                {chestDetailChest.rewards.map((reward, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.chestRewardRow,
+                      idx === chestDetailChest.rewards.length - 1 && styles.chestRewardRowLast,
+                    ]}
+                  >
+                    <Text style={styles.chestRewardLabel}>{reward.label}</Text>
+                    <Text style={styles.chestRewardValue}>{reward.value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.chestSheetSpacer} />
+
+              <TouchableOpacity
+                style={styles.chestOpenBtn}
+                onPress={() => handleBuyChest(chestDetailChest)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.chestOpenBtnLabel}>OUVRIR</Text>
+                <View style={styles.chestOpenBtnPrice}>
+                  <GemDiamond size={14} color="#22c55e" />
+                  <Text style={styles.chestOpenBtnPriceText}>{chestDetailChest.cost}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
+
+      {/* ROULETTE DOS DE CARTE (COFFRE ÉPIQUE) */}
+      <CardBackRouletteModal
+        visible={cardBackRoulette !== null}
+        cardBackSkins={cardBackSkins}
+        winnerId={cardBackRoulette?.winnerId}
+        onComplete={handleRouletteComplete}
+      />
+
       {/* MODAL D'OUVERTURE DE COFFRE ET GEMS */}
       <Modal
         visible={rewardModalInfo !== null}
@@ -1992,6 +2410,16 @@ function App() {
               {rewardModalInfo?.title}
             </Text>
             <Text style={styles.modalSubText}>{rewardModalInfo?.desc}</Text>
+
+            {rewardModalInfo?.cardBackId && (
+              <View style={styles.rewardCardBackPreview}>
+                <CardBackVisual
+                  skin={cardBackSkins.find((s) => s.id === rewardModalInfo.cardBackId) || cardBackSkins[0]}
+                  width={58}
+                  height={84}
+                />
+              </View>
+            )}
 
             <View style={styles.modalButtonsRow}>
               <TouchableOpacity 
@@ -2017,15 +2445,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  // TOP-LEFT GEMS BAR (POUR BOUTIQUE, ACCUEIL, PROFIL) — FOND NOIR PUR OLED, PAS DE CELLULE GRISE
-  topLeftGemsBar: {
-    position: 'absolute',
-    top: 52,
-    left: 18,
-    zIndex: 999,
+  // Bande dédiée en haut pour les Gems (pousse le contenu des onglets vers le bas)
+  gemsTopBand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#000000',
   },
   gemsTagText: {
     color: '#22c55e',
@@ -2036,7 +2463,7 @@ const styles = StyleSheet.create({
   // SHOP STYLES
   shopScroll: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 110,
     gap: 6,
   },
@@ -2075,45 +2502,149 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 8,
   },
-  chestsGrid: {
+  chestsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
   },
-  chestCell: {
-    width: '48%',
-    backgroundColor: '#050505',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#1c1c1c',
+  chestCellCompact: {
+    flex: 1,
+    backgroundColor: '#080808',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 8,
-    gap: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    gap: 8,
   },
-  chestCellName: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  chestCellDesc: {
-    color: '#525252',
+  chestCellTier: {
+    color: '#a3a3a3',
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '700',
+    letterSpacing: 0.5,
     textAlign: 'center',
   },
   chestCellPrice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    marginTop: 2,
+    gap: 2,
   },
   chestCellPriceText: {
     color: '#22c55e',
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  chestSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  chestSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+  },
+  chestSheet: {
+    height: '75%',
+    backgroundColor: '#080808',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderColor: '#1c1c1c',
+    borderBottomWidth: 0,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 28,
+    flexDirection: 'column',
+  },
+  chestSheetHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#2a2a2a',
+    marginBottom: 22,
+  },
+  chestSheetVisualWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  chestSheetTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    marginBottom: 24,
+  },
+  chestSheetSectionLabel: {
+    color: '#525252',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 12,
+  },
+  chestRewardsList: {
+    backgroundColor: '#0d0d0d',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
+    paddingVertical: 4,
+    marginBottom: 28,
+  },
+  chestRewardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#141414',
+  },
+  chestRewardRowLast: {
+    borderBottomWidth: 0,
+  },
+  chestSheetSpacer: {
+    flex: 1,
+  },
+  chestRewardLabel: {
+    color: '#737373',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chestRewardValue: {
+    color: '#e5e5e5',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  chestOpenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0a1a0f',
+    borderWidth: 1.5,
+    borderColor: '#22c55e',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  chestOpenBtnLabel: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  chestOpenBtnPrice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  chestOpenBtnPriceText: {
+    color: '#22c55e',
+    fontSize: 16,
     fontWeight: '900',
   },
   header: {
@@ -2163,7 +2694,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   homeScroll: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     gap: 20,
     backgroundColor: '#000000',
   },
@@ -2754,7 +3287,9 @@ const styles = StyleSheet.create({
 
   /* PROFILE STYLES (PURE OLED BLACK & TILE GRID) */
   profileScroll: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: '#000000',
   },
   profileMenuContainer: {
@@ -3145,6 +3680,21 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  compactSkinHandContainerLocked: {
+    borderColor: '#1c1c1c',
+    opacity: 0.45,
+  },
+  lockedSkinOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   overlappingHandWrapper: {
     width: 90,
     height: 74,
@@ -3163,6 +3713,133 @@ const styles = StyleSheet.create({
     left: 32,
     top: 0,
     transform: [{ rotate: '4deg' }],
+  },
+  equippedBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#e11d48',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBackUnlockHint: {
+    color: '#525252',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+
+  /* ROULETTE DOS DE CARTE */
+  rouletteOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  rouletteTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  rouletteSubtitle: {
+    color: '#737373',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 28,
+  },
+  rouletteViewport: {
+    height: 120,
+    overflow: 'hidden',
+    position: 'relative',
+    alignSelf: 'center',
+  },
+  rouletteCenterMarker: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '50%',
+    marginLeft: -(ROULETTE_ITEM_WIDTH / 2),
+    width: ROULETTE_ITEM_WIDTH,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderRadius: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+  },
+  rouletteItemWrap: {
+    width: ROULETTE_ITEM_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rouletteItem: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rouletteLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.62)',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rouletteWinnerGlow: {
+    position: 'absolute',
+    width: ROULETTE_CARD_W + 16,
+    height: ROULETTE_CARD_H + 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+  },
+  rouletteResultBox: {
+    marginTop: 32,
+    alignItems: 'center',
+    width: '100%',
+  },
+  rouletteResultName: {
+    color: '#22c55e',
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  rouletteResultHint: {
+    color: '#737373',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  rouletteContinueBtn: {
+    backgroundColor: '#22c55e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+  },
+  rouletteContinueBtnText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  rewardCardBackPreview: {
+    alignItems: 'center',
+    marginVertical: 16,
   },
 
   /* GRAPHIQUE DU SOLDE */
