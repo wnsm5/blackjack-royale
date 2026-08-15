@@ -327,6 +327,113 @@ function CardBackVisual({ skin, width = 58, height = 84 }) {
   );
 }
 
+// COMPOSANT ROULETTE / TIRAGE ALÉATOIRE DE CRÉDITS (COFFRES BRONZE & OR)
+function CreditRouletteModal({ visible, minCredits, maxCredits, winnerCredits, tierName, onComplete }) {
+  const [displayedCredits, setDisplayedCredits] = useState(minCredits);
+  const [phase, setPhase] = useState('rolling'); // 'rolling' | 'revealed'
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible || !winnerCredits) return;
+
+    setPhase('rolling');
+    setDisplayedCredits(minCredits);
+    scaleAnim.setValue(1);
+    glowAnim.setValue(0);
+
+    const startTime = Date.now();
+    const duration = 2400; // 2.4s de roulement de chiffres
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / duration);
+
+      if (progress >= 1) {
+        clearInterval(interval);
+        setDisplayedCredits(winnerCredits);
+        setPhase('revealed');
+
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(scaleAnim, {
+              toValue: 1.25,
+              duration: 250,
+              easing: Easing.out(Easing.back(1.5)),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        // Défilement de nombres aléatoires accéléré puis ralenti
+        const randomVal = Math.floor(minCredits + Math.random() * (maxCredits - minCredits));
+        setDisplayedCredits(randomVal);
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [visible, winnerCredits, minCredits, maxCredits]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={() => {}}>
+      <View style={styles.rouletteOverlay}>
+        <Text style={styles.rouletteTitle}>COFFRE {tierName?.toUpperCase()}</Text>
+        <Text style={styles.rouletteSubtitle}>
+          {phase === 'rolling' ? 'Tirage des crédits…' : 'Gain débloqué !'}
+        </Text>
+
+        <View style={styles.creditRouletteBox}>
+          <Animated.View
+            style={[
+              styles.creditRouletteGlow,
+              { opacity: glowAnim },
+            ]}
+            pointerEvents="none"
+          />
+
+          <Coins size={36} color="#fbbf24" />
+
+          <Animated.Text
+            style={[
+              styles.creditRouletteValue,
+              { transform: [{ scale: scaleAnim }] },
+            ]}
+          >
+            +{displayedCredits} CR
+          </Animated.Text>
+        </View>
+
+        {phase === 'revealed' && (
+          <View style={styles.rouletteResultBox}>
+            <Text style={styles.rouletteResultHint}>
+              Crédits ajoutés immédiatement à votre solde
+            </Text>
+            <TouchableOpacity
+              style={styles.rouletteContinueBtn}
+              onPress={onComplete}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.rouletteContinueBtnText}>CONTINUER</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete }) {
   const scrollAnim = useRef(new Animated.Value(0)).current;
   const winnerLockFade = useRef(new Animated.Value(1)).current;
@@ -335,26 +442,27 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
   const [phase, setPhase] = useState('spinning');
 
   const winnerSkin = cardBackSkins.find((s) => s.id === winnerId);
-  const viewportWidth = Dimensions.get('window').width - 48;
+  const lockedPool = useMemo(() => {
+    return cardBackSkins.filter((s) => !s.unlocked);
+  }, [cardBackSkins]);
 
   const strip = useMemo(() => {
-    if (!winnerId || !winnerSkin) return [];
+    if (!winnerId || !winnerSkin || lockedPool.length === 0) return [];
     const items = [];
-    const total = ROULETTE_WINNER_INDEX + 6;
+    const total = 60; // 60 cartes pour un défilement infini long et fluide
+    const otherLocked = lockedPool.filter((s) => s.id !== winnerId);
+    const poolToCycle = otherLocked.length > 0 ? otherLocked : [winnerSkin];
+
     for (let i = 0; i < total; i++) {
       if (i === ROULETTE_WINNER_INDEX) {
         items.push(winnerSkin);
       } else {
-        items.push(cardBackSkins[Math.floor(Math.random() * cardBackSkins.length)]);
+        // Répète en boucle ordonnée les skins restants à débloquer
+        items.push(poolToCycle[i % poolToCycle.length]);
       }
     }
     return items;
-  }, [winnerId, cardBackSkins, winnerSkin]);
-
-  const targetOffset = useMemo(() => {
-    const extraSpins = cardBackSkins.length * 3 * ROULETTE_ITEM_WIDTH;
-    return extraSpins + ROULETTE_WINNER_INDEX * ROULETTE_ITEM_WIDTH - (viewportWidth / 2) + ROULETTE_ITEM_WIDTH / 2;
-  }, [cardBackSkins.length, viewportWidth]);
+  }, [winnerId, winnerSkin, lockedPool]);
 
   useEffect(() => {
     if (!visible || !winnerId) return;
@@ -366,15 +474,12 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
     glowOpacity.setValue(0);
 
     const vw = Dimensions.get('window').width - 48;
-    const offset = cardBackSkins.length * 3 * ROULETTE_ITEM_WIDTH
-      + ROULETTE_WINNER_INDEX * ROULETTE_ITEM_WIDTH
-      - (vw / 2)
-      + ROULETTE_ITEM_WIDTH / 2;
+    const offset = ROULETTE_WINNER_INDEX * ROULETTE_ITEM_WIDTH - (vw / 2) + ROULETTE_ITEM_WIDTH / 2;
 
     const anim = Animated.timing(scrollAnim, {
       toValue: offset,
-      duration: 4500,
-      easing: Easing.out(Easing.cubic),
+      duration: 5200, // 5.2s défilement progressif qui ralentit naturellement
+      easing: Easing.bezier(0.12, 0.8, 0.22, 1), // Courbe de décélération de type casino roulette
       useNativeDriver: true,
     });
 
@@ -597,6 +702,7 @@ function App() {
   const [rewardModalInfo, setRewardModalInfo] = useState(null);
   const [chestDetailChest, setChestDetailChest] = useState(null);
   const [cardBackRoulette, setCardBackRoulette] = useState(null);
+  const [creditRoulette, setCreditRoulette] = useState(null); // { minCredits, maxCredits, winnerCredits, tierName }
 
   // User Profile State (Default: user_XXXX with random digits)
   const [username, setUsername] = useState(() => `user_${Math.floor(1000 + Math.random() * 9000)}`);
@@ -615,9 +721,9 @@ function App() {
       bgGlow: '#1a1208',
       minCredits: 250,
       maxCredits: 600,
+      type: 'CREDITS',
       rewards: [
         { label: 'Crédits', value: '250 – 600 CR' },
-        { label: 'Dos de carte', value: 'Non' },
       ],
     },
     {
@@ -630,8 +736,8 @@ function App() {
       bgGlow: '#0f1419',
       minCredits: 0,
       maxCredits: 0,
+      type: 'CARDBACKS',
       rewards: [
-        { label: 'Crédits', value: '0 CR' },
         { label: 'Dos de carte aléatoire', value: '1 garanti' },
       ],
     },
@@ -645,35 +751,24 @@ function App() {
       bgGlow: '#1a1508',
       minCredits: 1600,
       maxCredits: 4000,
+      type: 'CREDITS',
       rewards: [
         { label: 'Crédits', value: '1 600 – 4 000 CR' },
-        { label: 'Dos de carte', value: 'Non' },
       ],
     },
   ];
 
   const handleBuyChest = (chest) => {
+    // Si pas assez de gems, le clic est déjà désactivé / bloqué sans aucun popup
     if (gems < chest.cost) {
-      triggerHaptic(30);
-      setChestDetailChest(null);
-      setRewardModalInfo({
-        type: 'ERROR',
-        title: 'GEMS INSUFFISANTES',
-        desc: `Il vous manque ${chest.cost - gems} Gems pour ouvrir ce coffre.\n\nUtilisez la recharge quotidienne pour en obtenir.`,
-      });
+      triggerHaptic(20);
       return;
     }
 
     if (chest.id === 'ARGENT') {
       const lockedPool = cardBackSkins.filter((s) => !s.unlocked);
       if (lockedPool.length === 0) {
-        triggerHaptic(30);
-        setChestDetailChest(null);
-        setRewardModalInfo({
-          type: 'ERROR',
-          title: 'COLLECTION COMPLÈTE',
-          desc: 'Vous possédez déjà tous les dos de cartes disponibles.',
-        });
+        triggerHaptic(20);
         return;
       }
     }
@@ -689,15 +784,23 @@ function App() {
       return;
     }
 
+    // Tirage aléatoire animé pour les crédits
     const rewardCredits = Math.floor(chest.minCredits + Math.random() * (chest.maxCredits - chest.minCredits));
-    setCredits(prev => prev + rewardCredits);
-    setBalanceHistory(prev => [...prev, credits + rewardCredits]);
-
-    setRewardModalInfo({
-      type: 'CHEST',
-      title: `COFFRE DE ${chest.tierName.toUpperCase()}`,
-      desc: `Récompense débloquée.\n\n+${rewardCredits} crédits ajoutés à votre solde.`,
+    setCreditRoulette({
+      minCredits: chest.minCredits,
+      maxCredits: chest.maxCredits,
+      winnerCredits: rewardCredits,
+      tierName: chest.tierName,
     });
+  };
+
+  const handleCreditRouletteComplete = () => {
+    if (!creditRoulette) return;
+    const { winnerCredits } = creditRoulette;
+    setCredits(prev => prev + winnerCredits);
+    setBalanceHistory(prev => [...prev, credits + winnerCredits]);
+    setCreditRoulette(null);
+    triggerHaptic(50);
   };
 
   const handleRouletteComplete = () => {
@@ -825,18 +928,25 @@ function App() {
 
   const chestSheetPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 8,
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 5,
+      onMoveShouldSetPanResponderCapture: (_, gs) => gs.dy > 6,
       onPanResponderMove: (_, gs) => {
+        // Permet de déplacer de haut en bas (avec résistance vers le haut)
         if (gs.dy > 0) {
           chestSheetTranslateY.setValue(gs.dy);
+        } else {
+          // Résistance élastique légère vers le haut
+          chestSheetTranslateY.setValue(gs.dy * 0.25);
         }
       },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dy > 120 || gs.vy > 0.8) {
+        if (gs.dy > 80 || gs.vy > 0.6) {
           Animated.timing(chestSheetTranslateY, {
-            toValue: 600,
-            duration: 220,
+            toValue: 650,
+            duration: 200,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }).start(() => {
             setChestDetailChest(null);
@@ -845,7 +955,8 @@ function App() {
         } else {
           Animated.spring(chestSheetTranslateY, {
             toValue: 0,
-            bounciness: 4,
+            tension: 50,
+            friction: 8,
             useNativeDriver: true,
           }).start();
         }
@@ -2381,39 +2492,74 @@ function App() {
                 Coffre de {chestDetailChest.tierName}
               </Text>
 
-              <Text style={styles.chestSheetSectionLabel}>CONTENU POSSIBLE</Text>
-              <View style={styles.chestRewardsList}>
-                {chestDetailChest.rewards.map((reward, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.chestRewardRow,
-                      idx === chestDetailChest.rewards.length - 1 && styles.chestRewardRowLast,
-                    ]}
-                  >
-                    <Text style={styles.chestRewardLabel}>{reward.label}</Text>
-                    <Text style={styles.chestRewardValue}>{reward.value}</Text>
-                  </View>
-                ))}
-              </View>
+              <Text style={styles.chestSheetSectionLabel}>CONTENU DU COFFRE</Text>
+
+              {/* CONTENU DIRECT ET VISUEL (PAS DE TEXTE DESCRIPTIF) */}
+              {chestDetailChest.type === 'CREDITS' ? (
+                <View style={styles.chestVisualRewardDirectBox}>
+                  <Coins size={38} color="#fbbf24" />
+                  <Text style={styles.chestVisualRewardDirectText}>
+                    {chestDetailChest.minCredits} – {chestDetailChest.maxCredits} CR
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.chestVisualCardsDirectRow}>
+                  {cardBackSkins.filter((s) => !s.unlocked).slice(0, 4).map((skin) => (
+                    <View key={skin.id} style={styles.chestDirectMiniCardWrap}>
+                      <CardBackVisual skin={skin} width={42} height={60} />
+                    </View>
+                  ))}
+                  {cardBackSkins.filter((s) => !s.unlocked).length > 4 && (
+                    <View style={styles.chestDirectMoreBadge}>
+                      <Text style={styles.chestDirectMoreText}>
+                        +{cardBackSkins.filter((s) => !s.unlocked).length - 4}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.chestSheetSpacer} />
 
               <TouchableOpacity
-                style={styles.chestOpenBtn}
+                style={[
+                  styles.chestOpenBtn,
+                  gems < chestDetailChest.cost && styles.chestOpenBtnDisabled,
+                ]}
                 onPress={() => handleBuyChest(chestDetailChest)}
-                activeOpacity={0.85}
+                disabled={gems < chestDetailChest.cost}
+                activeOpacity={gems < chestDetailChest.cost ? 1 : 0.85}
               >
-                <Text style={styles.chestOpenBtnLabel}>OUVRIR</Text>
+                <Text style={[
+                  styles.chestOpenBtnLabel,
+                  gems < chestDetailChest.cost && { color: '#525252' },
+                ]}>
+                  {gems < chestDetailChest.cost ? 'GEMS INSUFFISANTES' : 'OUVRIR'}
+                </Text>
                 <View style={styles.chestOpenBtnPrice}>
-                  <GemDiamond size={14} color="#22c55e" />
-                  <Text style={styles.chestOpenBtnPriceText}>{chestDetailChest.cost}</Text>
+                  <GemDiamond size={14} color={gems < chestDetailChest.cost ? '#525252' : '#22c55e'} />
+                  <Text style={[
+                    styles.chestOpenBtnPriceText,
+                    gems < chestDetailChest.cost && { color: '#525252' },
+                  ]}>
+                    {chestDetailChest.cost}
+                  </Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
           )}
         </View>
       </Modal>
+
+      {/* ROULETTE TIRAGE CRÉDITS (COFFRES BRONZE & OR) */}
+      <CreditRouletteModal
+        visible={creditRoulette !== null}
+        minCredits={creditRoulette?.minCredits}
+        maxCredits={creditRoulette?.maxCredits}
+        winnerCredits={creditRoulette?.winnerCredits}
+        tierName={creditRoulette?.tierName}
+        onComplete={handleCreditRouletteComplete}
+      />
 
       {/* ROULETTE DOS DE CARTE (COFFRE ÉPIQUE) */}
       <CardBackRouletteModal
@@ -2622,38 +2768,88 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 12,
   },
-  chestRewardsList: {
+  chestVisualRewardDirectBox: {
     backgroundColor: '#121212',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1f1f1f',
-    paddingVertical: 4,
-    marginBottom: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 12,
+    marginBottom: 20,
   },
-  chestRewardRow: {
+  chestVisualRewardDirectText: {
+    color: '#fbbf24',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  chestVisualCardsDirectRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#121212',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1f1f1f',
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    marginBottom: 20,
   },
-  chestRewardRowLast: {
-    borderBottomWidth: 0,
+  chestDirectMiniCardWrap: {
+    borderRadius: 6,
+    overflow: 'hidden',
   },
-  chestSheetSpacer: {
-    flex: 1,
+  chestDirectMoreBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1c1c1c',
+    borderWidth: 1,
+    borderColor: '#333333',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  chestRewardLabel: {
-    color: '#737373',
-    fontSize: 13,
-    fontWeight: '600',
+  chestDirectMoreText: {
+    color: '#a3a3a3',
+    fontSize: 12,
+    fontWeight: '900',
   },
-  chestRewardValue: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
+  chestOpenBtnDisabled: {
+    backgroundColor: '#0a0a0a',
+    borderColor: '#1a1a1a',
+    opacity: 0.6,
+  },
+
+  /* ROULETTE CRÉDITS */
+  creditRouletteBox: {
+    width: '100%',
+    backgroundColor: '#0d0d0d',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#ca8a04',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    gap: 14,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  creditRouletteValue: {
+    color: '#fbbf24',
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  creditRouletteGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(251, 191, 36, 0.08)',
   },
   chestOpenBtn: {
     flexDirection: 'row',
