@@ -530,10 +530,6 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
         </Text>
 
         <View style={[styles.rouletteViewport, { width: viewportWidth }]}>
-          {phase === 'revealed' && (
-            <View style={styles.rouletteCenterMarker} pointerEvents="none" />
-          )}
-
           <Animated.View
             style={{
               flexDirection: 'row',
@@ -1688,15 +1684,14 @@ function App() {
                   </View>
                 </View>
 
-                {/* BANNIÈRE RÉSULTAT */}
-                {gameResult && (
-                  <View style={styles.resultBanner}>
-                    <Text style={styles.resultBannerText}>{gameResult}</Text>
-                  </View>
-                )}
-
-                {/* JOUEUR */}
+                {/* JOUEUR (AVEC BANNIÈRE RÉSULTAT AU-DESSUS) */}
                 <View style={styles.handSection}>
+                  {gameResult && (
+                    <View style={styles.resultBanner}>
+                      <Text style={styles.resultBannerText}>{gameResult}</Text>
+                    </View>
+                  )}
+
                   <View style={styles.handHeader}>
                     <Text style={styles.feltLabel}>JOUEUR</Text>
                     {game && !game.isSplit && (
@@ -1953,33 +1948,30 @@ function App() {
                     <Text style={styles.emptyHistoryText}>Aucune partie jouée pour le moment</Text>
                   </View>
                 ) : (
-                  history.slice(0, 10).map((item) => (
-                    <View
-                      key={item.id}
-                      style={[
-                        styles.historyRow,
-                        item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.historyRowWin
-                          : item.type === 'PUSH' ? styles.historyRowPush
-                          : styles.historyRowLoss
-                      ]}
-                    >
-                      <View style={styles.historyLeft}>
-                        <Text style={[styles.historyTypeBadge,
-                          item.type === 'WIN' || item.type === 'BLACKJACK' ? styles.textGreen
-                            : item.type === 'PUSH' ? styles.textGray : styles.textRed]}>
-                          {item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU'}
-                        </Text>
-                        <Text style={styles.historyScoreText}>{item.score}</Text>
+                  history.slice(0, 10).map((item) => {
+                    const isWin = item.type === 'WIN' || item.type === 'BLACKJACK';
+                    const isPush = item.type === 'PUSH';
+                    const payoutColor = isWin ? '#22c55e' : isPush ? '#a3a3a3' : '#ef4444';
+                    const typeColor = isWin ? '#22c55e' : isPush ? '#737373' : '#f43f5e';
+                    const typeLabel = item.type === 'WIN' ? 'GAGNÉ' : item.type === 'BLACKJACK' ? 'BLACKJACK' : item.type === 'PUSH' ? 'ÉGALITÉ' : 'PERDU';
+
+                    return (
+                      <View key={item.id} style={styles.historyItem}>
+                        <View style={styles.historyRowTop}>
+                          <Text style={styles.historyScore}>{item.score}</Text>
+                          <Text style={[styles.historyType, { color: typeColor }]}>
+                            {typeLabel}
+                          </Text>
+                        </View>
+                        <View style={styles.historyRowBottom}>
+                          <Text style={styles.historyBet}>Mise : {item.bet} CR</Text>
+                          <Text style={[styles.historyPayout, { color: payoutColor }]}>
+                            {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.historyRight}>
-                        <Text style={[styles.historyAmountText,
-                          item.payout > 0 ? styles.textGreen : item.payout < 0 ? styles.textRed : styles.textGray]}>
-                          {item.payout > 0 ? `+${item.payout} CR` : item.payout < 0 ? `${item.payout} CR` : '0 CR'}
-                        </Text>
-                        <Text style={styles.historyDateText}>{item.date}</Text>
-                      </View>
-                    </View>
-                  ))
+                    );
+                  })
                 )}
               </View>
             </ScrollView>
@@ -3317,6 +3309,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
+    marginBottom: 6,
   },
   resultBannerText: {
     color: '#ffffff',
