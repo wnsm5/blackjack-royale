@@ -442,6 +442,7 @@ function CardBackRouletteModal({ visible, cardBackSkins, winnerId, onComplete })
   const [phase, setPhase] = useState('spinning');
 
   const winnerSkin = cardBackSkins.find((s) => s.id === winnerId);
+  const viewportWidth = Dimensions.get('window').width - 48;
   const lockedPool = useMemo(() => {
     return cardBackSkins.filter((s) => !s.unlocked);
   }, [cardBackSkins]);
